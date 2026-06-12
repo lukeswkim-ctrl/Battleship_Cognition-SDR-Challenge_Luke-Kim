@@ -2,7 +2,7 @@
 
 Browser-based Battleship game: Human vs AI
 
-**Live Demo:** [DEPLOY_URL_HERE]
+**Live Demo:** (https://battleship-cognition-challenge.netlify.app/)
 
 ## Tech Stack
 
