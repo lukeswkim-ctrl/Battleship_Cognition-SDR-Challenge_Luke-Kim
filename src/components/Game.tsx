@@ -139,8 +139,6 @@ export function Game() {
     }
   }, [game.currentTurn, game.phase]);
 
-  const showDifficulty = game.phase === 'ended' || game.playerAttacks.size === 0;
-
   const shots = game.playerAttacks.size;
   const hits = Array.from(game.playerAttacks).filter((index) =>
     game.aiShips.some((ship) => ship.has(index))
@@ -150,7 +148,23 @@ export function Game() {
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center p-4 md:p-8">
       <h1 className="text-3xl md:text-4xl font-bold text-slate-100 mb-2">BATTLESHIP</h1>
-      <p className="text-sm md:text-base text-slate-400 mb-4">Sink all 5 enemy ships to win.</p>
+      <div className="flex flex-wrap justify-center items-center gap-2 mb-4">
+        <span className="text-slate-400 text-xs md:text-sm">Difficulty:</span>
+        {DIFFICULTIES.map((d) => (
+          <button
+            key={d.value}
+            type="button"
+            onClick={() => setDifficulty(d.value)}
+            className={`px-3 py-1 rounded text-sm font-semibold ${
+              difficulty === d.value
+                ? 'bg-emerald-600 text-white'
+                : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+            }`}
+          >
+            {d.label}
+          </button>
+        ))}
+      </div>
       <p className="text-base md:text-lg text-slate-300 mb-4 text-center">{game.message}</p>
       <p className="text-slate-300 text-xs md:text-sm mb-4 text-center">
         Shots: {shots} | Hits: {hits} | Accuracy: {accuracy}%
@@ -189,30 +203,13 @@ export function Game() {
         <p className="text-slate-400 text-xs md:text-sm">
           Choose a difficulty, then press New Game
         </p>
-        <div className="flex flex-wrap justify-center items-center gap-2">
-          {showDifficulty &&
-            DIFFICULTIES.map((d) => (
-              <button
-                key={d.value}
-                type="button"
-                onClick={() => setDifficulty(d.value)}
-                className={`px-3 py-1 rounded text-sm font-semibold ${
-                  difficulty === d.value
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-slate-700 text-slate-200 hover:bg-slate-600'
-                }`}
-              >
-                {d.label}
-              </button>
-            ))}
-          <button
-            type="button"
-            onClick={handleNewGame}
-            className="px-6 py-3 bg-emerald-600 text-white font-semibold rounded hover:bg-emerald-700"
-          >
-            New Game
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={handleNewGame}
+          className="px-6 py-3 bg-emerald-600 text-white font-semibold rounded hover:bg-emerald-700"
+        >
+          New Game
+        </button>
       </div>
     </div>
   );
