@@ -16,7 +16,7 @@ function FleetStatus({
   attacks: Set<number>;
 }) {
   return (
-    <div className="w-36 bg-slate-900 rounded p-3">
+    <div className="w-48 bg-slate-900 rounded p-3">
       <h3 className="font-bold text-slate-100 mb-2">{title}</h3>
       <ul className="space-y-2 text-sm">
         {fleet.map((ship, i) => {
