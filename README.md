@@ -25,7 +25,7 @@ npm run build  # production build
 
 1. Click "New Game" to start
 2. Click cells on the AI board (right side) to attack
-3. Pick a difficulty (Easy / Normal / Hard) before your first shot — it persists across New Game
+3. Pick a difficulty (Easy / Normal / Hard) using the selector below the New Game button. The selector is always visible, but is **locked during an active game** — you can only change it before your first shot or after a game ends. The selected difficulty persists across New Game.
 4. Color key:
    - `bg-blue-900` (navy) = empty water
    - camo (per-ship military shade) = your ship — each of your 5 ships has its own camo color
@@ -51,6 +51,7 @@ The on-screen legend shows Empty / Hit / Miss (your-ship camo is self-evident on
 - Hit/miss animations (CSS keyframes: hit pulse, miss fade)
 - Smart AI with hunt/target mode (after a hit, the AI targets adjacent cells instead of firing randomly)
 - Difficulty levels: Easy (pure random), Normal (hunt/target), Hard (hunt/target + collinear targeting)
+- Difficulty selector (below New Game) stays visible at all times but is disabled mid-game, so the difficulty can't change once a game is underway; the choice carries over to the next New Game
 - Mobile-responsive layout (cells and fonts scale down; the 3-column layout collapses to a single stacked column on narrow screens)
 - Color legend (Empty / Hit / Miss) below the boards
 

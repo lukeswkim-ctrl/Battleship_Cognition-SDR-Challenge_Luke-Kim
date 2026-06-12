@@ -179,8 +179,52 @@ at, Result.**
 
 ---
 
+## Bug 11 — Difficulty was changeable during an active game
+
+- **Phase:** Difficulty selector UX (PR #5)
+- **Severity:** P2 — Medium (gameplay-fairness defect: AI behavior could be swapped mid-match)
+- **Symptom:** The difficulty toggles stayed clickable after the player's first
+  shot, so the active difficulty (and therefore the AI's targeting behavior)
+  could be changed in the middle of a game. The selected difficulty is read on
+  every AI turn, so switching mid-game would alter the opponent's strategy
+  partway through a match.
+- **Fix:** Gated the toggles with
+  `canChooseDifficulty = game.phase === 'ended' || game.playerAttacks.size === 0`
+  and applied `disabled={!canChooseDifficulty}` (plus `disabled:opacity-50
+  disabled:cursor-not-allowed`). The selector stays visible so the current
+  difficulty is shown, but is only interactive before the first shot or after a
+  game ends.
+- **Caught at:** Reported during PR #5 review; confirmed fixed in the
+  comprehensive end-to-end test (toggles greyed out and non-clickable after the
+  first shot, re-enabled on New Game / game end).
+- **Result:** Difficulty cannot change once a game is underway; `tsc`/tests clean.
+
+---
+
 ## Verification
 
 - `npm test` → 41/41 passing
 - `npx tsc --noEmit` → no errors
 - `npm run build` → succeeds; JS bundle ~48 KB gzipped (target < 300 KB)
+
+### Comprehensive end-to-end test (PR #5)
+
+A full manual playthrough on the dev server (8 scenarios) passed with **no new
+defects** found:
+
+1. Ship placement & per-ship camo — 17 ship cells render in distinct camo
+   shades; enemy ships hidden.
+2. Hit/miss colors, fleet % panels, and the `Shots / Hits / Accuracy` stats bar
+   all update correctly (hit = red, miss = gray).
+3. Difficulty selector — selectable before the first shot, locked during play,
+   persists across New Game (see Bug 11).
+4. Turn locking — board clicks during the AI's turn are ignored (shot count does
+   not advance; all cells disabled).
+5. AI hunt/target — after a hit the AI's follow-up shots cluster on adjacent
+   cells (Normal/Hard) instead of scattering randomly.
+6. Player win detection — sinking all 5 enemy ships shows
+   "You win! All enemy ships destroyed." and re-enables the difficulty selector.
+7. New Game reset — `Shots/Hits/Accuracy` → 0, enemy ships hidden again, fresh
+   placement, difficulty preserved.
+8. Responsive layout — the 3-column layout collapses to a single stacked column
+   on narrow screens and cells/fonts scale down.

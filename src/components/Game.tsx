@@ -139,13 +139,12 @@ export function Game() {
     }
   }, [game.currentTurn, game.phase]);
 
-  const showDifficulty = game.phase === 'ended' || game.playerAttacks.size === 0;
-
   const shots = game.playerAttacks.size;
   const hits = Array.from(game.playerAttacks).filter((index) =>
     game.aiShips.some((ship) => ship.has(index))
   ).length;
   const accuracy = shots === 0 ? '0' : ((hits / shots) * 100).toFixed(1);
+  const canChooseDifficulty = game.phase === 'ended' || game.playerAttacks.size === 0;
 
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center p-4 md:p-8">
@@ -155,25 +154,6 @@ export function Game() {
       <p className="text-slate-300 text-xs md:text-sm mb-4 text-center">
         Shots: {shots} | Hits: {hits} | Accuracy: {accuracy}%
       </p>
-      {showDifficulty && (
-        <div className="flex flex-wrap justify-center items-center gap-2 mb-8">
-          <span className="text-slate-400 text-xs md:text-sm">Difficulty:</span>
-          {DIFFICULTIES.map((d) => (
-            <button
-              key={d.value}
-              type="button"
-              onClick={() => setDifficulty(d.value)}
-              className={`px-3 py-1 rounded text-sm font-semibold ${
-                difficulty === d.value
-                  ? 'bg-emerald-600 text-white'
-                  : 'bg-slate-700 text-slate-200 hover:bg-slate-600'
-              }`}
-            >
-              {d.label}
-            </button>
-          ))}
-        </div>
-      )}
       <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
         <FleetStatus title="Your Fleet" fleet={game.playerShips} attacks={game.aiAttacks} />
         <div className="flex flex-col sm:flex-row gap-4 sm:gap-8">
@@ -204,13 +184,33 @@ export function Game() {
           </span>
         ))}
       </div>
-      <button
-        type="button"
-        onClick={handleNewGame}
-        className="px-6 py-3 bg-emerald-600 text-white font-semibold rounded hover:bg-emerald-700"
-      >
-        New Game
-      </button>
+      <div className="flex flex-col items-center gap-3">
+        <button
+          type="button"
+          onClick={handleNewGame}
+          className="px-6 py-3 bg-emerald-600 text-white font-semibold rounded hover:bg-emerald-700"
+        >
+          New Game
+        </button>
+        <div className="flex flex-wrap justify-center items-center gap-2">
+          <span className="text-slate-400 text-xs md:text-sm">Difficulty:</span>
+          {DIFFICULTIES.map((d) => (
+            <button
+              key={d.value}
+              type="button"
+              onClick={() => setDifficulty(d.value)}
+              disabled={!canChooseDifficulty}
+              className={`px-3 py-1 rounded text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed ${
+                difficulty === d.value
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+              }`}
+            >
+              {d.label}
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
