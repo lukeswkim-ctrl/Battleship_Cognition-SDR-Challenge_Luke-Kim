@@ -25,8 +25,20 @@ describe('isValidPlacement', () => {
     expect(isValidPlacement(10, 3, new Set([11]))).toBe(false);
   });
 
-  it('length 3, start 10, occupied [13] → true (no overlap)', () => {
-    expect(isValidPlacement(10, 3, new Set([13]))).toBe(true);
+  it('length 3, start 10, occupied [14] → true (no overlap, not adjacent)', () => {
+    expect(isValidPlacement(10, 3, new Set([14]))).toBe(true);
+  });
+
+  it('length 3, start 10, occupied [13] → false (right-adjacent)', () => {
+    expect(isValidPlacement(10, 3, new Set([13]))).toBe(false);
+  });
+
+  it('length 3, start 11, occupied [10] → false (left-adjacent)', () => {
+    expect(isValidPlacement(11, 3, new Set([10]))).toBe(false);
+  });
+
+  it('length 3, start 10, occupied [1, 21] → true (vertical adjacency allowed)', () => {
+    expect(isValidPlacement(10, 3, new Set([1, 21]))).toBe(true);
   });
 
   it('length 2, start 9, empty → false (wraps row)', () => {
@@ -78,44 +90,60 @@ describe('placeShip', () => {
 });
 
 describe('placeAllShips', () => {
-  it('Returns Set of exactly 17 cells', () => {
-    expect(placeAllShips().size).toBe(17);
+  it('Returns 5 ships totaling 17 cells', () => {
+    const fleet = placeAllShips();
+    expect(fleet).toHaveLength(5);
+    expect(fleet.reduce((sum, ship) => sum + ship.size, 0)).toBe(17);
   });
 
   it('All indices valid (0-99)', () => {
-    const ships = placeAllShips();
-    for (const cell of ships) {
-      expect(cell).toBeGreaterThanOrEqual(0);
-      expect(cell).toBeLessThanOrEqual(99);
+    const fleet = placeAllShips();
+    for (const ship of fleet) {
+      for (const cell of ship) {
+        expect(cell).toBeGreaterThanOrEqual(0);
+        expect(cell).toBeLessThanOrEqual(99);
+      }
     }
   });
 
   it('Succeeds on 20 consecutive runs', () => {
     for (let i = 0; i < 20; i++) {
-      expect(placeAllShips().size).toBe(17);
+      const fleet = placeAllShips();
+      expect(fleet).toHaveLength(5);
+      expect(fleet.reduce((sum, ship) => sum + ship.size, 0)).toBe(17);
     }
   });
 });
 
 describe('isAllShipsSunk', () => {
-  it('attacks [1,2,3], ships [1,2,3] → true', () => {
-    expect(isAllShipsSunk(new Set([1, 2, 3]), new Set([1, 2, 3]))).toBe(true);
+  it('attacks [1,2,3], ships [[1,2,3]] → true', () => {
+    expect(isAllShipsSunk(new Set([1, 2, 3]), [new Set([1, 2, 3])])).toBe(true);
   });
 
-  it('attacks [1,2], ships [1,2,3] → false', () => {
-    expect(isAllShipsSunk(new Set([1, 2]), new Set([1, 2, 3]))).toBe(false);
+  it('attacks [1,2], ships [[1,2,3]] → false', () => {
+    expect(isAllShipsSunk(new Set([1, 2]), [new Set([1, 2, 3])])).toBe(false);
   });
 
-  it('attacks [1,2,3,4,5], ships [1,2,3] → true', () => {
-    expect(isAllShipsSunk(new Set([1, 2, 3, 4, 5]), new Set([1, 2, 3]))).toBe(true);
+  it('attacks [1,2,3,4,5], ships [[1,2,3]] → true', () => {
+    expect(isAllShipsSunk(new Set([1, 2, 3, 4, 5]), [new Set([1, 2, 3])])).toBe(true);
   });
 
-  it('attacks [], ships [1,2,3] → false', () => {
-    expect(isAllShipsSunk(new Set(), new Set([1, 2, 3]))).toBe(false);
+  it('attacks [], ships [[1,2,3]] → false', () => {
+    expect(isAllShipsSunk(new Set(), [new Set([1, 2, 3])])).toBe(false);
   });
 
-  it('attacks [4,5,6], ships [1,2,3] → false', () => {
-    expect(isAllShipsSunk(new Set([4, 5, 6]), new Set([1, 2, 3]))).toBe(false);
+  it('attacks [4,5,6], ships [[1,2,3]] → false', () => {
+    expect(isAllShipsSunk(new Set([4, 5, 6]), [new Set([1, 2, 3])])).toBe(false);
+  });
+
+  it('multi-ship: false when only some ships fully hit', () => {
+    const ships = [new Set([1, 2]), new Set([5, 6, 7])];
+    expect(isAllShipsSunk(new Set([1, 2]), ships)).toBe(false);
+  });
+
+  it('multi-ship: true when all ships fully hit', () => {
+    const ships = [new Set([1, 2]), new Set([5, 6, 7])];
+    expect(isAllShipsSunk(new Set([1, 2, 5, 6, 7]), ships)).toBe(true);
   });
 });
 
@@ -153,12 +181,16 @@ describe('initializeGame', () => {
     expect(game.message).toBe('Your turn. Click enemy waters to attack.');
   });
 
-  it('playerShips.size === 17', () => {
-    expect(initializeGame().playerShips.size).toBe(17);
+  it('playerShips has 5 ships totaling 17 cells', () => {
+    const fleet = initializeGame().playerShips;
+    expect(fleet).toHaveLength(5);
+    expect(fleet.reduce((sum, ship) => sum + ship.size, 0)).toBe(17);
   });
 
-  it('aiShips.size === 17', () => {
-    expect(initializeGame().aiShips.size).toBe(17);
+  it('aiShips has 5 ships totaling 17 cells', () => {
+    const fleet = initializeGame().aiShips;
+    expect(fleet).toHaveLength(5);
+    expect(fleet.reduce((sum, ship) => sum + ship.size, 0)).toBe(17);
   });
 
   it("phase === 'playing'", () => {
