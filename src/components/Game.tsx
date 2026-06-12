@@ -155,25 +155,6 @@ export function Game() {
       <p className="text-slate-300 text-xs md:text-sm mb-4 text-center">
         Shots: {shots} | Hits: {hits} | Accuracy: {accuracy}%
       </p>
-      {showDifficulty && (
-        <div className="flex flex-wrap justify-center items-center gap-2 mb-8">
-          <span className="text-slate-400 text-xs md:text-sm">Difficulty:</span>
-          {DIFFICULTIES.map((d) => (
-            <button
-              key={d.value}
-              type="button"
-              onClick={() => setDifficulty(d.value)}
-              className={`px-3 py-1 rounded text-sm font-semibold ${
-                difficulty === d.value
-                  ? 'bg-emerald-600 text-white'
-                  : 'bg-slate-700 text-slate-200 hover:bg-slate-600'
-              }`}
-            >
-              {d.label}
-            </button>
-          ))}
-        </div>
-      )}
       <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
         <FleetStatus title="Your Fleet" fleet={game.playerShips} attacks={game.aiAttacks} />
         <div className="flex flex-col sm:flex-row gap-4 sm:gap-8">
@@ -204,13 +185,35 @@ export function Game() {
           </span>
         ))}
       </div>
-      <button
-        type="button"
-        onClick={handleNewGame}
-        className="px-6 py-3 bg-emerald-600 text-white font-semibold rounded hover:bg-emerald-700"
-      >
-        New Game
-      </button>
+      <div className="flex flex-col items-center gap-2">
+        <p className="text-slate-400 text-xs md:text-sm">
+          Choose a difficulty, then press New Game
+        </p>
+        <div className="flex flex-wrap justify-center items-center gap-2">
+          {showDifficulty &&
+            DIFFICULTIES.map((d) => (
+              <button
+                key={d.value}
+                type="button"
+                onClick={() => setDifficulty(d.value)}
+                className={`px-3 py-1 rounded text-sm font-semibold ${
+                  difficulty === d.value
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-slate-700 text-slate-200 hover:bg-slate-600'
+                }`}
+              >
+                {d.label}
+              </button>
+            ))}
+          <button
+            type="button"
+            onClick={handleNewGame}
+            className="px-6 py-3 bg-emerald-600 text-white font-semibold rounded hover:bg-emerald-700"
+          >
+            New Game
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
