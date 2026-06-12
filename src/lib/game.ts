@@ -13,7 +13,14 @@ export function isValidPlacement(
   if (startRow !== endRow) return false;
 
   for (let i = 0; i < length; i++) {
-    if (occupied.has(startIndex + i)) return false;
+    const cell = startIndex + i;
+    if (occupied.has(cell)) return false;
+
+    const cellRow = Math.floor(cell / 10);
+    const left = cell - 1;
+    const right = cell + 1;
+    if (Math.floor(left / 10) === cellRow && occupied.has(left)) return false;
+    if (Math.floor(right / 10) === cellRow && occupied.has(right)) return false;
   }
 
   return true;

@@ -126,7 +126,7 @@ export function Game() {
 
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center p-8">
-      <h1 className="text-4xl font-bold text-slate-100 mb-2">BATTLESHIP — Human vs AI</h1>
+      <h1 className="text-4xl font-bold text-slate-100 mb-2">BATTLESHIP</h1>
       <p className="text-base text-slate-400 mb-4">Sink all 5 enemy ships to win.</p>
       <p className="text-lg text-slate-300 mb-4">{game.message}</p>
       <p className="text-slate-300 text-sm mb-8">

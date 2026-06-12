@@ -25,8 +25,20 @@ describe('isValidPlacement', () => {
     expect(isValidPlacement(10, 3, new Set([11]))).toBe(false);
   });
 
-  it('length 3, start 10, occupied [13] → true (no overlap)', () => {
-    expect(isValidPlacement(10, 3, new Set([13]))).toBe(true);
+  it('length 3, start 10, occupied [14] → true (no overlap, not adjacent)', () => {
+    expect(isValidPlacement(10, 3, new Set([14]))).toBe(true);
+  });
+
+  it('length 3, start 10, occupied [13] → false (right-adjacent)', () => {
+    expect(isValidPlacement(10, 3, new Set([13]))).toBe(false);
+  });
+
+  it('length 3, start 11, occupied [10] → false (left-adjacent)', () => {
+    expect(isValidPlacement(11, 3, new Set([10]))).toBe(false);
+  });
+
+  it('length 3, start 10, occupied [1, 21] → true (vertical adjacency allowed)', () => {
+    expect(isValidPlacement(10, 3, new Set([1, 21]))).toBe(true);
   });
 
   it('length 2, start 9, empty → false (wraps row)', () => {
