@@ -16,31 +16,31 @@ function FleetStatus({
   attacks: Set<number>;
 }) {
   return (
-    <table className="text-sm text-slate-200">
-      <thead>
-        <tr>
-          <th className="text-left font-bold pb-1 pr-4 text-slate-100" colSpan={3}>
-            {title}
-          </th>
-        </tr>
-      </thead>
-      <tbody>
+    <div className="w-36 bg-slate-900 rounded p-3">
+      <h3 className="font-bold text-slate-100 mb-2">{title}</h3>
+      <ul className="space-y-1 text-sm">
         {fleet.map((segment, i) => {
           const sunk = segment.every((cell) => attacks.has(cell));
           return (
-            <tr key={i}>
-              <td className="pr-3">{SHIP_NAMES[i]}</td>
-              <td className="pr-3 text-slate-400">({segment.length})</td>
-              <td className={sunk ? 'text-red-500 font-semibold' : 'text-emerald-500'}>
+            <li key={i} className="flex justify-between">
+              <span className="text-slate-300">{SHIP_NAMES[i]}</span>
+              <span className={sunk ? 'text-red-500 font-semibold' : 'text-emerald-500'}>
                 {sunk ? 'Sunk' : 'Afloat'}
-              </td>
-            </tr>
+              </span>
+            </li>
           );
         })}
-      </tbody>
-    </table>
+      </ul>
+    </div>
   );
 }
+
+const LEGEND = [
+  { color: 'bg-blue-900', label: 'Empty' },
+  { color: 'bg-gray-400', label: 'Your Ship' },
+  { color: 'bg-red-500', label: 'Hit' },
+  { color: 'bg-blue-300', label: 'Miss' },
+];
 
 export function Game() {
   const [game, setGame] = useState<GameState>(() => initializeGame());
@@ -129,38 +129,46 @@ export function Game() {
       <h1 className="text-4xl font-bold text-slate-100 mb-2">BATTLESHIP — Human vs AI</h1>
       <p className="text-base text-slate-400 mb-4">Sink all 5 enemy ships to win.</p>
       <p className="text-lg text-slate-300 mb-4">{game.message}</p>
-      <button
-        type="button"
-        onClick={handleNewGame}
-        className="px-6 py-3 bg-emerald-600 text-white font-semibold rounded hover:bg-emerald-700 mb-8"
-      >
-        New Game
-      </button>
-      <div className="flex gap-12 mb-6">
-        <FleetStatus title="Your Fleet" fleet={game.playerFleet} attacks={game.aiAttacks} />
-        <FleetStatus title="Enemy Fleet" fleet={game.aiFleet} attacks={game.playerAttacks} />
-      </div>
       <p className="text-slate-300 text-sm mb-8">
         Shots: {shots} | Hits: {hits} | Accuracy: {accuracy}%
       </p>
-      <div className="flex gap-8">
-        <Board
-          title="Your Fleet"
-          ships={game.playerShips}
-          attacks={game.aiAttacks}
-          showShips={true}
-          onCellClick={() => {}}
-          disabled={true}
-        />
-        <Board
-          title="Enemy Waters"
-          ships={game.aiShips}
-          attacks={game.playerAttacks}
-          showShips={game.phase === 'ended'}
-          onCellClick={handlePlayerAttack}
-          disabled={game.currentTurn !== 'player' || game.phase !== 'playing'}
-        />
+      <div className="flex flex-row items-start gap-6">
+        <FleetStatus title="Your Fleet" fleet={game.playerFleet} attacks={game.aiAttacks} />
+        <div className="flex gap-8">
+          <Board
+            title="Your Fleet"
+            ships={game.playerShips}
+            attacks={game.aiAttacks}
+            showShips={true}
+            onCellClick={() => {}}
+            disabled={true}
+          />
+          <Board
+            title="Enemy Waters"
+            ships={game.aiShips}
+            attacks={game.playerAttacks}
+            showShips={game.phase === 'ended'}
+            onCellClick={handlePlayerAttack}
+            disabled={game.currentTurn !== 'player' || game.phase !== 'playing'}
+          />
+        </div>
+        <FleetStatus title="Enemy Fleet" fleet={game.aiFleet} attacks={game.playerAttacks} />
       </div>
+      <div className="flex flex-row justify-center items-center gap-4 text-slate-400 text-xs mt-6 mb-8">
+        {LEGEND.map((item) => (
+          <span key={item.label} className="flex items-center gap-1">
+            <span className={`w-5 h-5 inline-block rounded-sm ${item.color}`} />
+            {item.label}
+          </span>
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={handleNewGame}
+        className="px-6 py-3 bg-emerald-600 text-white font-semibold rounded hover:bg-emerald-700"
+      >
+        New Game
+      </button>
     </div>
   );
 }
