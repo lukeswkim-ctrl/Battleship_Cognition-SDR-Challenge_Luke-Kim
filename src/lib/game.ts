@@ -47,6 +47,24 @@ export function placeAllShips(): Set<number> {
   return occupied;
 }
 
+export function placeFleet(): number[][] {
+  const lengths = [5, 4, 3, 3, 2];
+  const occupied = new Set<number>();
+  const fleet: number[][] = [];
+
+  for (const length of lengths) {
+    const ship = placeShip(length, occupied);
+    const cells: number[] = [];
+    for (const cell of ship) {
+      occupied.add(cell);
+      cells.push(cell);
+    }
+    fleet.push(cells.sort((a, b) => a - b));
+  }
+
+  return fleet;
+}
+
 export function isAllShipsSunk(attacks: Set<number>, ships: Set<number>): boolean {
   for (const ship of ships) {
     if (!attacks.has(ship)) return false;
@@ -55,11 +73,16 @@ export function isAllShipsSunk(attacks: Set<number>, ships: Set<number>): boolea
 }
 
 export function initializeGame(): GameState {
+  const playerFleet = placeFleet();
+  const aiFleet = placeFleet();
+
   return {
     phase: 'playing',
     currentTurn: 'player',
-    playerShips: placeAllShips(),
-    aiShips: placeAllShips(),
+    playerShips: new Set(playerFleet.flat()),
+    aiShips: new Set(aiFleet.flat()),
+    playerFleet,
+    aiFleet,
     playerAttacks: new Set<number>(),
     aiAttacks: new Set<number>(),
     winner: null,

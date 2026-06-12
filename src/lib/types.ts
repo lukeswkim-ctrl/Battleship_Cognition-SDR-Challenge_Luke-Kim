@@ -9,6 +9,8 @@ export interface GameState {
   currentTurn: Player;
   playerShips: Set<number>;
   aiShips: Set<number>;
+  playerFleet: number[][];
+  aiFleet: number[][];
   playerAttacks: Set<number>;
   aiAttacks: Set<number>;
   winner: Player | null;

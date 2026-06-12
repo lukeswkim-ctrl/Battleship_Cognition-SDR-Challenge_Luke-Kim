@@ -4,6 +4,44 @@ import { initializeGame, isAllShipsSunk } from '../lib/game';
 import { getAIMove } from '../lib/ai';
 import { GameState } from '../lib/types';
 
+const SHIP_NAMES = ['Carrier', 'Battleship', 'Cruiser', 'Submarine', 'Destroyer'];
+
+function FleetStatus({
+  title,
+  fleet,
+  attacks,
+}: {
+  title: string;
+  fleet: number[][];
+  attacks: Set<number>;
+}) {
+  return (
+    <table className="text-sm text-slate-200">
+      <thead>
+        <tr>
+          <th className="text-left font-bold pb-1 pr-4 text-slate-100" colSpan={3}>
+            {title}
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {fleet.map((segment, i) => {
+          const sunk = segment.every((cell) => attacks.has(cell));
+          return (
+            <tr key={i}>
+              <td className="pr-3">{SHIP_NAMES[i]}</td>
+              <td className="pr-3 text-slate-400">({segment.length})</td>
+              <td className={sunk ? 'text-red-500 font-semibold' : 'text-emerald-500'}>
+                {sunk ? 'Sunk' : 'Afloat'}
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+}
+
 export function Game() {
   const [game, setGame] = useState<GameState>(() => initializeGame());
 
@@ -98,6 +136,10 @@ export function Game() {
       >
         New Game
       </button>
+      <div className="flex gap-12 mb-6">
+        <FleetStatus title="Your Fleet" fleet={game.playerFleet} attacks={game.aiAttacks} />
+        <FleetStatus title="Enemy Fleet" fleet={game.aiFleet} attacks={game.playerAttacks} />
+      </div>
       <p className="text-slate-300 text-sm mb-8">
         Shots: {shots} | Hits: {hits} | Accuracy: {accuracy}%
       </p>
