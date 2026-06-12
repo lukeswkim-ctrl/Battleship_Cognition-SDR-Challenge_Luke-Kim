@@ -28,6 +28,11 @@ export function Board({
     return 'empty';
   };
 
+  const getShipIndex = (index: number): number | undefined => {
+    const shipIndex = ships.findIndex((ship) => ship.has(index));
+    return shipIndex === -1 ? undefined : shipIndex;
+  };
+
   return (
     <div>
       <h2 className="text-lg md:text-xl font-bold mb-4 text-slate-100">{title}</h2>
@@ -36,6 +41,7 @@ export function Board({
           <Cell
             key={index}
             state={getCellState(index)}
+            shipIndex={getShipIndex(index)}
             onClick={() => onCellClick(index)}
             disabled={disabled}
           />

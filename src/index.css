@@ -47,3 +47,48 @@ body {
     radial-gradient(ellipse 30% 40% at 55% 25%, #6b7c3a 0%, transparent 50%);
   background-color: #556b2f;
 }
+
+/* Carrier — olive drab */
+.cell-camo-0 {
+  background-image:
+    radial-gradient(ellipse 40% 50% at 30% 40%, #4a5e2a 0%, transparent 60%),
+    radial-gradient(ellipse 35% 45% at 70% 60%, #3b4a1e 0%, transparent 55%),
+    radial-gradient(ellipse 30% 40% at 55% 25%, #6b7c3a 0%, transparent 50%);
+  background-color: #556b2f;
+}
+
+/* Battleship — deep forest green */
+.cell-camo-1 {
+  background-image:
+    radial-gradient(ellipse 40% 50% at 30% 40%, #2f4023 0%, transparent 60%),
+    radial-gradient(ellipse 35% 45% at 70% 60%, #1f3018 0%, transparent 55%),
+    radial-gradient(ellipse 30% 40% at 55% 25%, #46582f 0%, transparent 50%);
+  background-color: #344e1f;
+}
+
+/* Cruiser — desert tan */
+.cell-camo-2 {
+  background-image:
+    radial-gradient(ellipse 40% 50% at 30% 40%, #a3925f 0%, transparent 60%),
+    radial-gradient(ellipse 35% 45% at 70% 60%, #6f6038 0%, transparent 55%),
+    radial-gradient(ellipse 30% 40% at 55% 25%, #c2b489 0%, transparent 50%);
+  background-color: #8a7a4e;
+}
+
+/* Submarine — navy blue-gray */
+.cell-camo-3 {
+  background-image:
+    radial-gradient(ellipse 40% 50% at 30% 40%, #3a4f5c 0%, transparent 60%),
+    radial-gradient(ellipse 35% 45% at 70% 60%, #243640 0%, transparent 55%),
+    radial-gradient(ellipse 30% 40% at 55% 25%, #51707f 0%, transparent 50%);
+  background-color: #34505c;
+}
+
+/* Destroyer — urban gray */
+.cell-camo-4 {
+  background-image:
+    radial-gradient(ellipse 40% 50% at 30% 40%, #6a6f66 0%, transparent 60%),
+    radial-gradient(ellipse 35% 45% at 70% 60%, #44483f 0%, transparent 55%),
+    radial-gradient(ellipse 30% 40% at 55% 25%, #888d80 0%, transparent 50%);
+  background-color: #5a5f55;
+}
