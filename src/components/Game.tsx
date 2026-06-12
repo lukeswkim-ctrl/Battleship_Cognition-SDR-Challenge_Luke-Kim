@@ -12,21 +12,36 @@ function FleetStatus({
   attacks,
 }: {
   title: string;
-  fleet: number[][];
+  fleet: Set<number>[];
   attacks: Set<number>;
 }) {
   return (
     <div className="w-36 bg-slate-900 rounded p-3">
       <h3 className="font-bold text-slate-100 mb-2">{title}</h3>
-      <ul className="space-y-1 text-sm">
-        {fleet.map((segment, i) => {
-          const sunk = segment.every((cell) => attacks.has(cell));
+      <ul className="space-y-2 text-sm">
+        {fleet.map((ship, i) => {
+          const size = ship.size;
+          const hits = Array.from(ship).filter((cell) => attacks.has(cell)).length;
+          const pct = Math.round((hits / size) * 100);
+          const color =
+            pct === 100
+              ? 'text-red-500 line-through'
+              : pct === 0
+                ? 'text-emerald-500'
+                : 'text-yellow-500';
+          const fillColor =
+            pct === 100 ? 'bg-red-500' : pct === 0 ? 'bg-emerald-500' : 'bg-yellow-500';
           return (
-            <li key={i} className="flex justify-between">
-              <span className="text-slate-300">{SHIP_NAMES[i]}</span>
-              <span className={sunk ? 'text-red-500 font-semibold' : 'text-emerald-500'}>
-                {sunk ? 'Sunk' : 'Afloat'}
-              </span>
+            <li key={i}>
+              <div className={`flex justify-between ${color}`}>
+                <span>
+                  {SHIP_NAMES[i]} ({size})
+                </span>
+                <span>{pct}%</span>
+              </div>
+              <div className="mt-1 h-2 w-full bg-slate-700 rounded-sm overflow-hidden">
+                <div className={`h-full ${fillColor}`} style={{ width: `${pct}%` }} />
+              </div>
             </li>
           );
         })}
@@ -52,7 +67,7 @@ export function Game() {
 
     const newAttacks = new Set(game.playerAttacks);
     newAttacks.add(index);
-    const isHit = game.aiShips.has(index);
+    const isHit = game.aiShips.some((ship) => ship.has(index));
 
     if (isAllShipsSunk(newAttacks, game.aiShips)) {
       setGame({
@@ -81,7 +96,7 @@ export function Game() {
       const aiMove = getAIMove(game.aiAttacks);
       const newAttacks = new Set(game.aiAttacks);
       newAttacks.add(aiMove);
-      const isHit = game.playerShips.has(aiMove);
+      const isHit = game.playerShips.some((ship) => ship.has(aiMove));
 
       if (isAllShipsSunk(newAttacks, game.playerShips)) {
         setGame({
@@ -120,7 +135,7 @@ export function Game() {
 
   const shots = game.playerAttacks.size;
   const hits = Array.from(game.playerAttacks).filter((index) =>
-    game.aiShips.has(index)
+    game.aiShips.some((ship) => ship.has(index))
   ).length;
   const accuracy = shots === 0 ? '0' : ((hits / shots) * 100).toFixed(1);
 
@@ -133,7 +148,7 @@ export function Game() {
         Shots: {shots} | Hits: {hits} | Accuracy: {accuracy}%
       </p>
       <div className="flex flex-row items-start gap-6">
-        <FleetStatus title="Your Fleet" fleet={game.playerFleet} attacks={game.aiAttacks} />
+        <FleetStatus title="Your Fleet" fleet={game.playerShips} attacks={game.aiAttacks} />
         <div className="flex gap-8">
           <Board
             title="Your Fleet"
@@ -152,7 +167,7 @@ export function Game() {
             disabled={game.currentTurn !== 'player' || game.phase !== 'playing'}
           />
         </div>
-        <FleetStatus title="Enemy Fleet" fleet={game.aiFleet} attacks={game.playerAttacks} />
+        <FleetStatus title="Enemy Fleet" fleet={game.aiShips} attacks={game.playerAttacks} />
       </div>
       <div className="flex flex-row justify-center items-center gap-4 text-slate-400 text-xs mt-6 mb-8">
         {LEGEND.map((item) => (

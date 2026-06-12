@@ -40,56 +40,37 @@ export function placeShip(length: number, occupied: Set<number>): Set<number> {
   throw new Error(`Failed to place ship of length ${length} after 1000 attempts`);
 }
 
-export function placeAllShips(): Set<number> {
+export function placeAllShips(): Set<number>[] {
   const lengths = [5, 4, 3, 3, 2];
   const occupied = new Set<number>();
+  const fleet: Set<number>[] = [];
 
   for (const length of lengths) {
     const ship = placeShip(length, occupied);
     for (const cell of ship) {
       occupied.add(cell);
     }
-  }
-
-  return occupied;
-}
-
-export function placeFleet(): number[][] {
-  const lengths = [5, 4, 3, 3, 2];
-  const occupied = new Set<number>();
-  const fleet: number[][] = [];
-
-  for (const length of lengths) {
-    const ship = placeShip(length, occupied);
-    const cells: number[] = [];
-    for (const cell of ship) {
-      occupied.add(cell);
-      cells.push(cell);
-    }
-    fleet.push(cells.sort((a, b) => a - b));
+    fleet.push(ship);
   }
 
   return fleet;
 }
 
-export function isAllShipsSunk(attacks: Set<number>, ships: Set<number>): boolean {
-  for (const ship of ships) {
-    if (!attacks.has(ship)) return false;
-  }
-  return true;
+export function isAllShipsSunk(
+  attacks: Set<number>,
+  ships: Set<number>[]
+): boolean {
+  return ships.every((ship) =>
+    Array.from(ship).every((cell) => attacks.has(cell))
+  );
 }
 
 export function initializeGame(): GameState {
-  const playerFleet = placeFleet();
-  const aiFleet = placeFleet();
-
   return {
     phase: 'playing',
     currentTurn: 'player',
-    playerShips: new Set(playerFleet.flat()),
-    aiShips: new Set(aiFleet.flat()),
-    playerFleet,
-    aiFleet,
+    playerShips: placeAllShips(),
+    aiShips: placeAllShips(),
     playerAttacks: new Set<number>(),
     aiAttacks: new Set<number>(),
     winner: null,

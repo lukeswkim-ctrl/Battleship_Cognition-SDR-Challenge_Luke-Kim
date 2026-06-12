@@ -3,7 +3,7 @@ import { CellState } from '../lib/types';
 
 interface BoardProps {
   title: string;
-  ships: Set<number>;
+  ships: Set<number>[];
   attacks: Set<number>;
   showShips: boolean;
   onCellClick: (index: number) => void;
@@ -20,7 +20,7 @@ export function Board({
 }: BoardProps) {
   const getCellState = (index: number): CellState => {
     const isAttacked = attacks.has(index);
-    const isShip = ships.has(index);
+    const isShip = ships.some((ship) => ship.has(index));
 
     if (isAttacked && isShip) return 'hit';
     if (isAttacked) return 'miss';
