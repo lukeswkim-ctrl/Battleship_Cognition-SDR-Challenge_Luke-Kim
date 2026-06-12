@@ -80,17 +80,27 @@ export function Game() {
     }
   }, [game.currentTurn, game.phase]);
 
+  const shots = game.playerAttacks.size;
+  const hits = Array.from(game.playerAttacks).filter((index) =>
+    game.aiShips.has(index)
+  ).length;
+  const accuracy = shots === 0 ? '0' : ((hits / shots) * 100).toFixed(1);
+
   return (
-    <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-8">
-      <h1 className="text-4xl font-bold text-slate-100 mb-4">Battleship</h1>
+    <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center p-8">
+      <h1 className="text-4xl font-bold text-slate-100 mb-2">BATTLESHIP — Human vs AI</h1>
+      <p className="text-base text-slate-400 mb-4">Sink all 5 enemy ships to win.</p>
       <p className="text-lg text-slate-300 mb-4">{game.message}</p>
       <button
         type="button"
         onClick={handleNewGame}
-        className="px-6 py-3 bg-blue-600 text-white font-semibold rounded hover:bg-blue-700 mb-8"
+        className="px-6 py-3 bg-emerald-600 text-white font-semibold rounded hover:bg-emerald-700 mb-8"
       >
         New Game
       </button>
+      <p className="text-slate-300 text-sm mb-8">
+        Shots: {shots} | Hits: {hits} | Accuracy: {accuracy}%
+      </p>
       <div className="flex gap-8">
         <Board
           title="Your Fleet"
