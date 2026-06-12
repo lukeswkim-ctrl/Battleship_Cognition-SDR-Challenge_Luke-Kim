@@ -144,6 +144,7 @@ export function Game() {
     game.aiShips.some((ship) => ship.has(index))
   ).length;
   const accuracy = shots === 0 ? '0' : ((hits / shots) * 100).toFixed(1);
+  const canChooseDifficulty = game.phase === 'ended' || game.playerAttacks.size === 0;
 
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center p-4 md:p-8">
@@ -198,7 +199,8 @@ export function Game() {
               key={d.value}
               type="button"
               onClick={() => setDifficulty(d.value)}
-              className={`px-3 py-1 rounded text-sm font-semibold ${
+              disabled={!canChooseDifficulty}
+              className={`px-3 py-1 rounded text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed ${
                 difficulty === d.value
                   ? 'bg-emerald-600 text-white'
                   : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
