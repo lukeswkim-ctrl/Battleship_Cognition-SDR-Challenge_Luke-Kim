@@ -30,7 +30,7 @@ export function Board({
 
   return (
     <div>
-      <h2 className="text-xl font-bold mb-4 text-slate-100">{title}</h2>
+      <h2 className="text-lg md:text-xl font-bold mb-4 text-slate-100">{title}</h2>
       <div className="grid grid-cols-10 gap-0.5 bg-slate-700 p-0.5">
         {Array.from({ length: 100 }, (_, index) => (
           <Cell

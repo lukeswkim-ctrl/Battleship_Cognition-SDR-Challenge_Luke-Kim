@@ -170,6 +170,49 @@ describe('getAIMove', () => {
     const attacks = new Set(Array.from({ length: 99 }, (_, i) => i));
     expect(getAIMove(attacks)).toBe(99);
   });
+
+  it('Hunt/target: targets a cell adjacent to a confirmed hit', () => {
+    const playerShips = [new Set([45, 46])];
+    const previousAttacks = new Set([45]);
+    const adjacent = new Set([35, 55, 44, 46]);
+    for (let i = 0; i < 50; i++) {
+      const move = getAIMove(previousAttacks, playerShips, 'normal');
+      expect(adjacent.has(move)).toBe(true);
+    }
+  });
+
+  it('Hunt/target: falls back to random when no adjacent cells remain', () => {
+    const playerShips = [new Set([45])];
+    const previousAttacks = new Set([35, 44, 45, 46, 55]);
+    for (let i = 0; i < 20; i++) {
+      const move = getAIMove(previousAttacks, playerShips, 'normal');
+      expect(previousAttacks.has(move)).toBe(false);
+      expect(move).toBeGreaterThanOrEqual(0);
+      expect(move).toBeLessThanOrEqual(99);
+    }
+  });
+
+  it('Hard: continues collinear with existing hits on a ship', () => {
+    const playerShips = [new Set([45, 46, 47])];
+    const previousAttacks = new Set([45, 46]);
+    const collinear = new Set([44, 47]);
+    for (let i = 0; i < 50; i++) {
+      const move = getAIMove(previousAttacks, playerShips, 'hard');
+      expect(collinear.has(move)).toBe(true);
+    }
+  });
+
+  it('Easy: ignores hunt/target (can pick non-adjacent cells)', () => {
+    const playerShips = [new Set([45, 46])];
+    const previousAttacks = new Set([45]);
+    const adjacent = new Set([35, 55, 44, 46]);
+    let sawNonAdjacent = false;
+    for (let i = 0; i < 100; i++) {
+      const move = getAIMove(previousAttacks, playerShips, 'easy');
+      if (!adjacent.has(move)) sawNonAdjacent = true;
+    }
+    expect(sawNonAdjacent).toBe(true);
+  });
 });
 
 describe('initializeGame', () => {
@@ -199,5 +242,13 @@ describe('initializeGame', () => {
 
   it("currentTurn === 'player'", () => {
     expect(initializeGame().currentTurn).toBe('player');
+  });
+
+  it('defaults difficulty to normal', () => {
+    expect(initializeGame().difficulty).toBe('normal');
+  });
+
+  it('accepts a difficulty argument', () => {
+    expect(initializeGame('hard').difficulty).toBe('hard');
   });
 });

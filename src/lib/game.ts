@@ -1,4 +1,4 @@
-import { GameState } from './types';
+import { Difficulty, GameState } from './types';
 
 export function isValidPlacement(
   startIndex: number,
@@ -65,10 +65,11 @@ export function isAllShipsSunk(
   );
 }
 
-export function initializeGame(): GameState {
+export function initializeGame(difficulty: Difficulty = 'normal'): GameState {
   return {
     phase: 'playing',
     currentTurn: 'player',
+    difficulty,
     playerShips: placeAllShips(),
     aiShips: placeAllShips(),
     playerAttacks: new Set<number>(),
