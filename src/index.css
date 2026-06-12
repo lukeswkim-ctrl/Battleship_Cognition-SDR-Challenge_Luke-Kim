@@ -39,3 +39,11 @@ body {
 .cell-miss {
   animation: cell-miss-fade 200ms ease-in;
 }
+
+.cell-camo {
+  background-image:
+    radial-gradient(ellipse 40% 50% at 30% 40%, #4a5e2a 0%, transparent 60%),
+    radial-gradient(ellipse 35% 45% at 70% 60%, #3b4a1e 0%, transparent 55%),
+    radial-gradient(ellipse 30% 40% at 55% 25%, #6b7c3a 0%, transparent 50%);
+  background-color: #556b2f;
+}

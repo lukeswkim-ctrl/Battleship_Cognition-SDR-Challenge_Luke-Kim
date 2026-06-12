@@ -58,7 +58,6 @@ function FleetStatus({
 
 const LEGEND = [
   { color: 'bg-blue-900', label: 'Empty' },
-  { color: 'bg-gray-400', label: 'Your Ship' },
   { color: 'bg-red-500', label: 'Hit' },
   { color: 'bg-blue-300', label: 'Miss' },
 ];

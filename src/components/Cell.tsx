@@ -8,7 +8,7 @@ interface CellProps {
 
 const stateColors: Record<CellState, string> = {
   empty: 'bg-blue-900',
-  ship: 'bg-gray-400',
+  ship: 'cell-camo',
   hit: 'bg-red-500',
   miss: 'bg-blue-300',
 };
