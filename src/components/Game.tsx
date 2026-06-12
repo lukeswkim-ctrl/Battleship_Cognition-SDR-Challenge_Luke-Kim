@@ -2,9 +2,15 @@ import { useEffect, useState } from 'react';
 import { Board } from './Board';
 import { initializeGame, isAllShipsSunk } from '../lib/game';
 import { getAIMove } from '../lib/ai';
-import { GameState } from '../lib/types';
+import { Difficulty, GameState } from '../lib/types';
 
 const SHIP_NAMES = ['Carrier', 'Battleship', 'Cruiser', 'Submarine', 'Destroyer'];
+
+const DIFFICULTIES: { value: Difficulty; label: string }[] = [
+  { value: 'easy', label: 'Easy' },
+  { value: 'normal', label: 'Normal' },
+  { value: 'hard', label: 'Hard' },
+];
 
 function FleetStatus({
   title,
@@ -16,7 +22,7 @@ function FleetStatus({
   attacks: Set<number>;
 }) {
   return (
-    <div className="w-48 bg-slate-900 rounded p-3">
+    <div className="w-40 sm:w-48 bg-slate-900 rounded p-3">
       <h3 className="font-bold text-slate-100 mb-2">{title}</h3>
       <ul className="space-y-2 text-sm">
         {fleet.map((ship, i) => {
@@ -52,13 +58,13 @@ function FleetStatus({
 
 const LEGEND = [
   { color: 'bg-blue-900', label: 'Empty' },
-  { color: 'bg-gray-400', label: 'Your Ship' },
   { color: 'bg-red-500', label: 'Hit' },
-  { color: 'bg-blue-300', label: 'Miss' },
+  { color: 'bg-gray-400', label: 'Miss' },
 ];
 
 export function Game() {
-  const [game, setGame] = useState<GameState>(() => initializeGame());
+  const [difficulty, setDifficulty] = useState<Difficulty>('normal');
+  const [game, setGame] = useState<GameState>(() => initializeGame('normal'));
 
   const handlePlayerAttack = (index: number) => {
     if (game.phase !== 'playing') return;
@@ -93,7 +99,7 @@ export function Game() {
     if (game.currentTurn !== 'ai') return;
 
     try {
-      const aiMove = getAIMove(game.aiAttacks);
+      const aiMove = getAIMove(game.aiAttacks, game.playerShips, difficulty);
       const newAttacks = new Set(game.aiAttacks);
       newAttacks.add(aiMove);
       const isHit = game.playerShips.some((ship) => ship.has(aiMove));
@@ -121,7 +127,7 @@ export function Game() {
   };
 
   const handleNewGame = () => {
-    setGame(initializeGame());
+    setGame(initializeGame(difficulty));
   };
 
   useEffect(() => {
@@ -133,6 +139,8 @@ export function Game() {
     }
   }, [game.currentTurn, game.phase]);
 
+  const showDifficulty = game.phase === 'ended' || game.playerAttacks.size === 0;
+
   const shots = game.playerAttacks.size;
   const hits = Array.from(game.playerAttacks).filter((index) =>
     game.aiShips.some((ship) => ship.has(index))
@@ -140,16 +148,35 @@ export function Game() {
   const accuracy = shots === 0 ? '0' : ((hits / shots) * 100).toFixed(1);
 
   return (
-    <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center p-8">
-      <h1 className="text-4xl font-bold text-slate-100 mb-2">BATTLESHIP</h1>
-      <p className="text-base text-slate-400 mb-4">Sink all 5 enemy ships to win.</p>
-      <p className="text-lg text-slate-300 mb-4">{game.message}</p>
-      <p className="text-slate-300 text-sm mb-8">
+    <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center p-4 md:p-8">
+      <h1 className="text-3xl md:text-4xl font-bold text-slate-100 mb-2">BATTLESHIP</h1>
+      <p className="text-sm md:text-base text-slate-400 mb-4">Sink all 5 enemy ships to win.</p>
+      <p className="text-base md:text-lg text-slate-300 mb-4 text-center">{game.message}</p>
+      <p className="text-slate-300 text-xs md:text-sm mb-4 text-center">
         Shots: {shots} | Hits: {hits} | Accuracy: {accuracy}%
       </p>
-      <div className="flex flex-row items-start gap-6">
+      {showDifficulty && (
+        <div className="flex flex-wrap justify-center items-center gap-2 mb-8">
+          <span className="text-slate-400 text-xs md:text-sm">Difficulty:</span>
+          {DIFFICULTIES.map((d) => (
+            <button
+              key={d.value}
+              type="button"
+              onClick={() => setDifficulty(d.value)}
+              className={`px-3 py-1 rounded text-sm font-semibold ${
+                difficulty === d.value
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-slate-700 text-slate-200 hover:bg-slate-600'
+              }`}
+            >
+              {d.label}
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
         <FleetStatus title="Your Fleet" fleet={game.playerShips} attacks={game.aiAttacks} />
-        <div className="flex gap-8">
+        <div className="flex flex-col sm:flex-row gap-4 sm:gap-8">
           <Board
             title="Your Fleet"
             ships={game.playerShips}
