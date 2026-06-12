@@ -59,7 +59,7 @@ function FleetStatus({
 const LEGEND = [
   { color: 'bg-blue-900', label: 'Empty' },
   { color: 'bg-red-500', label: 'Hit' },
-  { color: 'bg-blue-300', label: 'Miss' },
+  { color: 'bg-gray-400', label: 'Miss' },
 ];
 
 export function Game() {

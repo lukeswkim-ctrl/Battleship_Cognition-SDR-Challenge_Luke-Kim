@@ -30,7 +30,7 @@ npm run build  # production build
    - `bg-blue-900` (navy) = empty water
    - camo (per-ship military shade) = your ship — each of your 5 ships has its own camo color
    - `bg-red-500` (red) = hit
-   - `bg-blue-300` (light blue) = miss
+   - `bg-gray-400` (gray) = miss
 5. Sink all 5 enemy ships to win
 
 The on-screen legend shows Empty / Hit / Miss (your-ship camo is self-evident on your own board).
