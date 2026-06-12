@@ -1,5 +1,6 @@
 ```markdown
-# FINAL_BATTLESHIP_SPEC.md
+# CLOUD_BATTLESHIP_BUILD_SPEC.md/
+//Initial spec used for Devin Cloud initiation; information may be outdated due to subsequent coding changes / decisions (e.g., fixed bugs, added features).
 
 **Project:** Browser-Based Battleship Game  
 **Target:** Weekend Delivery (Friday → Sunday)  
