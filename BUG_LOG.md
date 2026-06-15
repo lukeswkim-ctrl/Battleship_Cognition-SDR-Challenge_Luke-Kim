@@ -223,9 +223,12 @@ at, Result.**
   enemy board buttons immediately via a `useState` flag set before `setGame`.
 - **Caught at:** Adversarial rapid-click testing with Playwright (30 ms click
   intervals).
-- **Result:** **Open / unfixed.** Under normal human play (~200 ms+ between
-  clicks) this is unlikely to trigger, but it is a real race condition that
-  programmatic or very fast clicks can exploit.
+- **Fix applied:** Added a synchronous `useRef` lock (`attackLockRef`) in
+  `handlePlayerAttack`. The lock is set immediately on entry (before any async
+  state update) and cleared only when the AI turn completes or a new game starts.
+  Because refs update synchronously, queued click events see the lock and bail
+  out even before React re-renders.
+- **Result:** **Fixed.** Rapid clicks now correctly register only the first shot.
 
 ---
 
