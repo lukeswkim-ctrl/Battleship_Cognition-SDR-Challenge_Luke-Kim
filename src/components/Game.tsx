@@ -306,23 +306,25 @@ export function Game() {
         >
           New Game
         </button>
-        <div className="flex flex-wrap justify-center items-center gap-2">
+        <div className="flex flex-col items-center gap-1">
           <span className="text-slate-400 text-xs md:text-sm">Difficulty:</span>
-          {DIFFICULTIES.map((d) => (
-            <button
-              key={d.value}
-              type="button"
-              onClick={() => setDifficulty(d.value)}
-              disabled={!canChooseDifficulty}
-              className={`px-3 py-1 rounded text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed ${
-                difficulty === d.value
-                  ? 'bg-emerald-600 text-white'
-                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-              }`}
-            >
-              {d.label}
-            </button>
-          ))}
+          <div className="flex flex-wrap justify-center items-center gap-2">
+            {DIFFICULTIES.map((d) => (
+              <button
+                key={d.value}
+                type="button"
+                onClick={() => setDifficulty(d.value)}
+                disabled={!canChooseDifficulty}
+                className={`px-3 py-1 rounded text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed ${
+                  difficulty === d.value
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                }`}
+              >
+                {d.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </div>

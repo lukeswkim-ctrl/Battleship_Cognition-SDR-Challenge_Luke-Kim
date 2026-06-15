@@ -51,7 +51,7 @@ export function Board({
 
   return (
     <div>
-      <h2 className="text-lg md:text-xl font-bold mb-4 text-slate-100">{title}</h2>
+      <h2 className="text-lg md:text-xl font-bold mb-4 text-slate-100 pl-[1.125rem] sm:pl-[1.375rem] md:pl-[1.625rem]">{title}</h2>
       <div className="inline-block">
         {/* Column labels (A–J) */}
         <div className="flex pb-0.5">
