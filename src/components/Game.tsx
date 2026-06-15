@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Board, CellFlash } from './Board';
+import { EndGameModal } from './EndGameModal';
 import { StatsPanel } from './StatsPanel';
 import { initializeGame, isAllShipsSunk } from '../lib/game';
 import { getAIMove } from '../lib/ai';
@@ -95,6 +96,7 @@ export function Game() {
   const [game, setGame] = useState<GameState>(() => initializeGame(loadDifficulty()));
   const [lifetimeStats, setLifetimeStats] = useState<LifetimeStats>(() => loadStats());
   const gameRecordedRef = useRef(false);
+  const [showEndModal, setShowEndModal] = useState(false);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [lastAction, setLastAction] = useState<LastAction | null>(null);
   const [playerFlash, setPlayerFlash] = useState<CellFlash | null>(null);
@@ -196,7 +198,18 @@ export function Game() {
     setPlayerFlash(null);
     setAiFlash(null);
     gameRecordedRef.current = false;
+    setShowEndModal(false);
   };
+
+  const handleChangeDifficulty = useCallback(() => {
+    setGame(initializeGame(difficulty));
+    setLastAction(null);
+    setHoveredIndex(null);
+    setPlayerFlash(null);
+    setAiFlash(null);
+    gameRecordedRef.current = false;
+    setShowEndModal(false);
+  }, [difficulty]);
 
   const handleDifficultyChange = useCallback((d: Difficulty) => {
     setDifficulty(d);
@@ -219,6 +232,8 @@ export function Game() {
       const updated = recordGameResult(lifetimeStats, won, shotsFired, hitsLanded, difficulty);
       setLifetimeStats(updated);
       saveStats(updated);
+      const timer = setTimeout(() => setShowEndModal(true), 300);
+      return () => clearTimeout(timer);
     }
   }, [game.phase]);
 
@@ -361,6 +376,15 @@ export function Game() {
       <div className="mt-4">
         <StatsPanel stats={lifetimeStats} onReset={handleResetStats} />
       </div>
+      {showEndModal && game.phase === 'ended' && (
+        <EndGameModal
+          game={game}
+          difficulty={difficulty}
+          lifetimeStats={lifetimeStats}
+          onPlayAgain={handleNewGame}
+          onChangeDifficulty={handleChangeDifficulty}
+        />
+      )}
     </div>
   );
 }
