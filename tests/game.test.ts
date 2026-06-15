@@ -72,11 +72,13 @@ describe('placeShip', () => {
     }
   });
 
-  it('Indices are consecutive', () => {
+  it('Indices are consecutive along one axis', () => {
     const ship = placeShip(5, new Set());
     const sorted = Array.from(ship).sort((a, b) => a - b);
+    const step = sorted[1] - sorted[0];
+    expect([1, 10]).toContain(step);
     for (let i = 1; i < sorted.length; i++) {
-      expect(sorted[i] - sorted[i - 1]).toBe(1);
+      expect(sorted[i] - sorted[i - 1]).toBe(step);
     }
   });
 
