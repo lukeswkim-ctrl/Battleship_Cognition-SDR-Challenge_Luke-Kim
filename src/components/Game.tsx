@@ -255,7 +255,7 @@ export function Game() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center p-4 md:p-8">
+    <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-start p-4 md:p-8">
       <h1 className="text-3xl md:text-4xl font-bold text-slate-100 mb-2">BATTLESHIP</h1>
       <p className="text-sm md:text-base text-slate-400 mb-4">Sink all 5 enemy ships to win.</p>
       <p className="text-slate-300 text-xs md:text-sm mb-4 text-center">
@@ -294,9 +294,12 @@ export function Game() {
             flash={playerFlash}
           />
         </div>
-        <FleetStatus title="Enemy Fleet" fleet={game.aiShips} attacks={game.playerAttacks} />
+        <div className="flex flex-col gap-6 w-full md:w-auto">
+          <FleetStatus title="Enemy Fleet" fleet={game.aiShips} attacks={game.playerAttacks} />
+          <BattleLog entries={game.battleLog} />
+        </div>
       </div>
-      <div className="flex flex-row justify-center items-center gap-4 text-slate-400 text-xs mt-6">
+      <div className="flex flex-row justify-center items-center gap-4 text-slate-400 text-xs mt-6 mb-8">
         {LEGEND.map((item) => (
           <span key={item.label} className="flex items-center gap-1">
             <span className={`w-5 h-5 inline-block rounded-sm ${item.color}`} />
@@ -304,8 +307,6 @@ export function Game() {
           </span>
         ))}
       </div>
-      <BattleLog entries={game.battleLog} />
-      <div className="mb-8" />
       <div className="flex flex-col items-center gap-3">
         <button
           type="button"
