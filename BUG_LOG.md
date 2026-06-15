@@ -232,9 +232,100 @@ at, Result.**
 
 ---
 
+## Bug 13 — `handleAIAttack` stale closure due to missing useEffect deps
+
+- **Phase:** Bug fix sweep (PR #15)
+- **Severity:** P1 — High (AI turn could read stale `game`/`difficulty` state)
+- **Symptom:** `handleAIAttack` was defined inline in the component body and
+  referenced in a `useEffect` that triggered the AI turn, but was NOT listed in
+  that effect's dependency array. If `game` or `difficulty` changed between
+  renders, the effect's closure would still reference the old function instance
+  with stale captured values. Changing difficulty mid-game (before the lock was
+  added) could cause the AI to use the wrong difficulty for its next move.
+- **Root cause:** React closures capture values at render time. Without wrapping
+  the handler in `useCallback` and listing it as a dependency, the effect never
+  picks up the updated function.
+- **Fix:** Wrapped `handleAIAttack` in `useCallback([game, difficulty])` and
+  added `handleAIAttack` to the AI-turn `useEffect` dependency array.
+- **Caught at:** Guided bug-fix audit.
+- **Result:** **Fixed.** AI turn always reads current `game` and `difficulty`.
+
+---
+
+## Bug 14 — AI wastes moves probing neighbors of already-sunk ships
+
+- **Phase:** Bug fix sweep (PR #15)
+- **Severity:** P2 — Medium (suboptimal AI targeting, not a crash)
+- **Symptom:** On Normal/Hard difficulty, the hunt/target AI builds a
+  `confirmedHits` list from all previously-hit cells. Once a ship is fully sunk,
+  those cells should no longer be considered "live" hits to probe around — but
+  the old filter didn't exclude them. The AI would waste turns targeting cells
+  adjacent to already-sunk ships.
+- **Root cause:** `confirmedHits` filter only checked `ship.has(cell)`, not
+  whether every cell of that ship was already hit (i.e. ship is sunk).
+- **Fix:** Added `!allHit` guard: `const allHit = Array.from(ship).every(c =>
+  previousAttacks.has(c)); return !allHit;` — cells on fully-sunk ships are
+  excluded from `confirmedHits`.
+- **Caught at:** Guided bug-fix audit; verified by new unit test
+  `"Normal: does not target neighbors of fully sunk ships"`.
+- **Result:** **Fixed.** AI never probes around sunk ships; 49/49 tests pass.
+
+---
+
+## Bug 15 — No confirmation when clicking "New Game" mid-game
+
+- **Phase:** Bug fix sweep (PR #15)
+- **Severity:** P2 — Medium (accidental data loss)
+- **Symptom:** Clicking "New Game" while a game is in progress immediately resets
+  all state with no warning. Players could accidentally lose a long game with a
+  single misclick.
+- **Fix:** Added `window.confirm('A game is in progress. Start a new game? All
+  progress will be lost.')` guard when `game.phase === 'playing' &&
+  game.playerAttacks.size > 0`. If the user clicks Cancel, the function returns
+  early. Also resets `attackLockRef.current = false` before starting a new game.
+- **Caught at:** Guided bug-fix audit; verified by E2E test (confirm dialog
+  appears, Cancel preserves state, OK resets).
+- **Result:** **Fixed.** Accidental resets prevented.
+
+---
+
+## Bug 16 — Game state lost on page reload
+
+- **Phase:** Bug fix sweep (PR #15)
+- **Severity:** P1 — High (all progress lost on accidental refresh/close)
+- **Symptom:** Refreshing the page or closing the tab during an active game would
+  lose all progress. The game always initialized fresh from `initializeGame()`.
+- **Root cause:** No persistence layer existed; game state lived only in React
+  component memory.
+- **Fix:** Added `serializeGameState`/`deserializeGameState`/`loadGameState`/
+  `saveGameState`/`clearGameState` to `game.ts`. `useState` initializer loads
+  from localStorage (`loadGameState() ?? initializeGame(...)`). A `useEffect`
+  persists on every state change. A `beforeunload` listener warns the user
+  during active games. `handleNewGame` calls `clearGameState()`.
+- **Caught at:** Guided bug-fix audit; verified by E2E test (F5 reload preserves
+  Shots counter + board state; beforeunload warning fires).
+- **Result:** **Fixed.** Game survives page reload; 2 new serialization unit tests pass.
+
+---
+
+## Bug 17 — Legend missing "Ship" color entry
+
+- **Phase:** Bug fix sweep (PR #15)
+- **Severity:** P3 — Low (cosmetic: legend incomplete)
+- **Symptom:** The color legend below the boards only showed 4 entries (Empty,
+  Hit, Sunk, Miss). The camo "Ship" color used on the player's fleet board was
+  not represented, making it unclear what the green/olive cells meant.
+- **Fix:** Added `{ color: 'cell-camo cell-camo-0', label: 'Ship' }` to the
+  `LEGEND` array between Empty and Hit.
+- **Caught at:** Guided bug-fix audit; verified visually (legend now shows 5
+  entries with the correct camo swatch).
+- **Result:** **Fixed.** Legend is now complete.
+
+---
+
 ## Verification
 
-- `npm test` → 41/41 passing
+- `npm test` → 49/49 passing (41 original + 8 new)
 - `npx tsc --noEmit` → no errors
 - `npm run build` → succeeds; JS bundle ~48 KB gzipped (target < 300 KB)
 
