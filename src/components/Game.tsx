@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Board, CellFlash } from './Board';
 import { EndGameModal } from './EndGameModal';
+import { SinkToast, SinkToastItem } from './SinkToast';
 import { StatsPanel } from './StatsPanel';
 import { initializeGame, isAllShipsSunk } from '../lib/game';
 import { getAIMove } from '../lib/ai';
@@ -88,6 +89,7 @@ function FleetStatus({
 const LEGEND = [
   { color: 'bg-blue-900', label: 'Empty' },
   { color: 'bg-red-500', label: 'Hit' },
+  { color: 'bg-orange-700 border border-orange-400', label: 'Sunk' },
   { color: 'bg-gray-400', label: 'Miss' },
 ];
 
@@ -97,6 +99,8 @@ export function Game() {
   const [lifetimeStats, setLifetimeStats] = useState<LifetimeStats>(() => loadStats());
   const gameRecordedRef = useRef(false);
   const [showEndModal, setShowEndModal] = useState(false);
+  const [sinkToasts, setSinkToasts] = useState<SinkToastItem[]>([]);
+  const toastIdRef = useRef(0);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [lastAction, setLastAction] = useState<LastAction | null>(null);
   const [playerFlash, setPlayerFlash] = useState<CellFlash | null>(null);
@@ -134,6 +138,10 @@ export function Game() {
     const { result, shipName } = resolveAttack(index, game.aiShips, newAttacks);
     setLastAction({ actor: 'player', index, result, shipName });
     flashEnemyCell(index, result);
+    if (result === 'sunk' && shipName) {
+      const id = ++toastIdRef.current;
+      setSinkToasts((prev) => [...prev, { id, message: `You sank the enemy ${shipName}!`, isPlayer: true }]);
+    }
 
     if (isAllShipsSunk(newAttacks, game.aiShips)) {
       setGame({
@@ -167,6 +175,10 @@ export function Game() {
       const { result, shipName } = resolveAttack(aiMove, game.playerShips, newAttacks);
       setLastAction({ actor: 'ai', index: aiMove, result, shipName });
       flashPlayerCell(aiMove, result);
+      if (result === 'sunk' && shipName) {
+        const id = ++toastIdRef.current;
+        setSinkToasts((prev) => [...prev, { id, message: `The enemy sank your ${shipName}!`, isPlayer: false }]);
+      }
 
       if (isAllShipsSunk(newAttacks, game.playerShips)) {
         setGame({
@@ -199,7 +211,12 @@ export function Game() {
     setAiFlash(null);
     gameRecordedRef.current = false;
     setShowEndModal(false);
+    setSinkToasts([]);
   };
+
+  const handleDismissToast = useCallback((id: number) => {
+    setSinkToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
 
   const handleChangeDifficulty = useCallback(() => {
     setGame(initializeGame(difficulty));
@@ -209,6 +226,7 @@ export function Game() {
     setAiFlash(null);
     gameRecordedRef.current = false;
     setShowEndModal(false);
+    setSinkToasts([]);
   }, [difficulty]);
 
   const handleDifficultyChange = useCallback((d: Difficulty) => {
@@ -295,6 +313,7 @@ export function Game() {
 
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center p-4 md:p-8">
+      <SinkToast toasts={sinkToasts} onDismiss={handleDismissToast} />
       <h1 className="text-3xl md:text-4xl font-bold text-slate-100 mb-2">BATTLESHIP</h1>
       <p className="text-sm md:text-base text-slate-400 mb-4">Sink all 5 enemy ships to win.</p>
       <p className="text-slate-300 text-xs md:text-sm mb-4 text-center">

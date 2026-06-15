@@ -6,6 +6,7 @@ interface CellProps {
   disabled: boolean;
   shipIndex?: number;
   isTargetable?: boolean;
+  isSunk?: boolean;
 }
 
 const stateColors: Record<CellState, string> = {
@@ -20,11 +21,13 @@ const stateAnimations: Partial<Record<CellState, string>> = {
   miss: 'cell-miss',
 };
 
-export function Cell({ state, onClick, disabled, shipIndex, isTargetable }: CellProps) {
+export function Cell({ state, onClick, disabled, shipIndex, isTargetable, isSunk }: CellProps) {
   const colorClass =
-    state === 'ship' && shipIndex !== undefined
-      ? `cell-camo cell-camo-${shipIndex}`
-      : stateColors[state];
+    isSunk && state === 'hit'
+      ? 'bg-orange-700'
+      : state === 'ship' && shipIndex !== undefined
+        ? `cell-camo cell-camo-${shipIndex}`
+        : stateColors[state];
 
   let interactionClass: string;
   if (disabled && (state === 'hit' || state === 'miss')) {
@@ -43,9 +46,13 @@ export function Cell({ state, onClick, disabled, shipIndex, isTargetable }: Cell
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`w-7 h-7 sm:w-9 sm:h-9 md:w-11 md:h-11 border border-slate-500 ${colorClass} ${
+      className={`w-7 h-7 sm:w-9 sm:h-9 md:w-11 md:h-11 border ${isSunk && state === 'hit' ? 'border-orange-400' : 'border-slate-500'} ${colorClass} ${
         stateAnimations[state] ?? ''
       } ${interactionClass}`}
-    />
+    >
+      {isSunk && state === 'hit' && (
+        <span className="text-orange-200 text-[10px] sm:text-xs font-bold select-none">✕</span>
+      )}
+    </button>
   );
 }

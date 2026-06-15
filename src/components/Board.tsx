@@ -46,6 +46,13 @@ export function Board({
     return shipIndex === -1 ? undefined : shipIndex;
   };
 
+  const sunkCells = new Set<number>();
+  for (const ship of ships) {
+    if (Array.from(ship).every((cell) => attacks.has(cell))) {
+      for (const cell of ship) sunkCells.add(cell);
+    }
+  }
+
   const rowLabelClass = 'w-4 sm:w-5 md:w-6 shrink-0';
   const cellLabelClass = 'w-7 sm:w-9 md:w-11 shrink-0';
 
@@ -93,6 +100,7 @@ export function Board({
                   onClick={() => onCellClick(index)}
                   disabled={disabled}
                   isTargetable={isTargetable && !attacks.has(index)}
+                  isSunk={sunkCells.has(index)}
                 />
                 {flash && flash.index === index && (
                   <span className={`float-label float-label-${flash.kind}`}>{flash.text}</span>
