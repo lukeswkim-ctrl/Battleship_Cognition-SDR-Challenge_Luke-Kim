@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Board } from './Board';
+import { ToastContainer, ToastItem, ToastKind } from './Toast';
 import { initializeGame, isAllShipsSunk } from '../lib/game';
 import { getAIMove } from '../lib/ai';
 import { Difficulty, GameState, Player } from '../lib/types';
@@ -93,6 +94,14 @@ export function Game() {
   const [game, setGame] = useState<GameState>(() => initializeGame('normal'));
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [lastAction, setLastAction] = useState<LastAction | null>(null);
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const toastIdRef = useRef(0);
+
+  const pushToast = (text: string, kind: ToastKind) => {
+    const id = toastIdRef.current++;
+    setToasts((prev) => [...prev, { id, text, kind }]);
+    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 2500);
+  };
 
   const handlePlayerAttack = (index: number) => {
     if (game.phase !== 'playing') return;
@@ -104,6 +113,9 @@ export function Game() {
     const isHit = game.aiShips.some((ship) => ship.has(index));
     const { result, shipName } = resolveAttack(index, game.aiShips, newAttacks);
     setLastAction({ actor: 'player', index, result, shipName });
+    if (result === 'sunk') pushToast(`Ship Sunk: ${shipName}!`, 'sunk');
+    else if (result === 'hit') pushToast('Direct Hit!', 'hit');
+    else pushToast('Miss', 'miss');
 
     if (isAllShipsSunk(newAttacks, game.aiShips)) {
       setGame({
@@ -116,6 +128,7 @@ export function Game() {
       return;
     }
 
+    pushToast('Enemy Turn', 'enemy');
     setGame({
       ...game,
       playerAttacks: newAttacks,
@@ -135,6 +148,9 @@ export function Game() {
       const isHit = game.playerShips.some((ship) => ship.has(aiMove));
       const { result, shipName } = resolveAttack(aiMove, game.playerShips, newAttacks);
       setLastAction({ actor: 'ai', index: aiMove, result, shipName });
+      if (result === 'sunk') pushToast(`Enemy sunk your ${shipName}!`, 'enemy');
+      else if (result === 'hit') pushToast('Enemy Hit!', 'enemy');
+      else pushToast('Enemy Missed', 'enemy');
 
       if (isAllShipsSunk(newAttacks, game.playerShips)) {
         setGame({
@@ -162,6 +178,7 @@ export function Game() {
     setGame(initializeGame(difficulty));
     setLastAction(null);
     setHoveredIndex(null);
+    setToasts([]);
   };
 
   useEffect(() => {
@@ -222,6 +239,7 @@ export function Game() {
 
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center p-4 md:p-8">
+      <ToastContainer toasts={toasts} />
       <h1 className="text-3xl md:text-4xl font-bold text-slate-100 mb-2">BATTLESHIP</h1>
       <p className="text-sm md:text-base text-slate-400 mb-4">Sink all 5 enemy ships to win.</p>
       <p className="text-base md:text-lg text-slate-300 mb-4 text-center">{game.message}</p>
