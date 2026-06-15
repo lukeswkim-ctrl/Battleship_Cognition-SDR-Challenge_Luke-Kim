@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Board, CellFlash } from './Board';
+import { BattleLog } from './BattleLog';
 import { initializeGame, isAllShipsSunk } from '../lib/game';
 import { getAIMove } from '../lib/ai';
-import { Difficulty, GameState, Player } from '../lib/types';
+import { Difficulty, GameState, LogEntry, Player } from '../lib/types';
 import { indexToCoord } from '../lib/coords';
 
 const SHIP_NAMES = ['Carrier', 'Battleship', 'Cruiser', 'Submarine', 'Destroyer'];
@@ -126,6 +127,7 @@ export function Game() {
     newAttacks.add(index);
     const isHit = game.aiShips.some((ship) => ship.has(index));
     const { result, shipName } = resolveAttack(index, game.aiShips, newAttacks);
+    const entry: LogEntry = { actor: 'player', index, result, shipName };
     setLastAction({ actor: 'player', index, result, shipName });
     flashEnemyCell(index, result);
 
@@ -136,6 +138,7 @@ export function Game() {
         phase: 'ended',
         winner: 'player',
         message: 'You win! All enemy ships destroyed.',
+        battleLog: [...game.battleLog, entry],
       });
       return;
     }
@@ -145,6 +148,7 @@ export function Game() {
       playerAttacks: newAttacks,
       currentTurn: 'ai',
       message: isHit ? 'Hit!' : 'Miss.',
+      battleLog: [...game.battleLog, entry],
     });
   };
 
@@ -158,6 +162,7 @@ export function Game() {
       newAttacks.add(aiMove);
       const isHit = game.playerShips.some((ship) => ship.has(aiMove));
       const { result, shipName } = resolveAttack(aiMove, game.playerShips, newAttacks);
+      const entry: LogEntry = { actor: 'ai', index: aiMove, result, shipName };
       setLastAction({ actor: 'ai', index: aiMove, result, shipName });
       flashPlayerCell(aiMove, result);
 
@@ -168,6 +173,7 @@ export function Game() {
           phase: 'ended',
           winner: 'ai',
           message: 'AI wins! All your ships destroyed.',
+          battleLog: [...game.battleLog, entry],
         });
         return;
       }
@@ -177,6 +183,7 @@ export function Game() {
         aiAttacks: newAttacks,
         currentTurn: 'player',
         message: isHit ? 'AI hit your ship!' : 'AI missed.',
+        battleLog: [...game.battleLog, entry],
       });
     } catch (error) {
       console.error('AI move failed:', error);
@@ -289,7 +296,7 @@ export function Game() {
         </div>
         <FleetStatus title="Enemy Fleet" fleet={game.aiShips} attacks={game.playerAttacks} />
       </div>
-      <div className="flex flex-row justify-center items-center gap-4 text-slate-400 text-xs mt-6 mb-8">
+      <div className="flex flex-row justify-center items-center gap-4 text-slate-400 text-xs mt-6">
         {LEGEND.map((item) => (
           <span key={item.label} className="flex items-center gap-1">
             <span className={`w-5 h-5 inline-block rounded-sm ${item.color}`} />
@@ -297,6 +304,8 @@ export function Game() {
           </span>
         ))}
       </div>
+      <BattleLog entries={game.battleLog} />
+      <div className="mb-8" />
       <div className="flex flex-col items-center gap-3">
         <button
           type="button"

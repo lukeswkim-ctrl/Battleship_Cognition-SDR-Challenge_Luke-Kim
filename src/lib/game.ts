@@ -76,5 +76,6 @@ export function initializeGame(difficulty: Difficulty = 'normal'): GameState {
     aiAttacks: new Set<number>(),
     winner: null,
     message: 'Your turn. Click enemy waters to attack.',
+    battleLog: [],
   };
 }
