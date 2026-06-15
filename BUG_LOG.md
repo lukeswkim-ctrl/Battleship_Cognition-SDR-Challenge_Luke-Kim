@@ -1,8 +1,7 @@
 # Bug Log
 
 This log records issues found and fixed while implementing the spec and the
-post-spec feature work. The implementation follows `CLOUD_BATTLESHIP_BUILD_SPEC.md`
-exactly; the entries below are the gaps/defects/decisions that surfaced during
+post-spec feature work. The entries below are the gaps/defects/decisions that surfaced during
 build-out, plus how each was resolved.
 
 Every entry uses the same attributes: **Phase, Severity, Symptom, Fix, Caught
