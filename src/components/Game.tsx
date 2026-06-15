@@ -2,9 +2,35 @@ import { useEffect, useState } from 'react';
 import { Board } from './Board';
 import { initializeGame, isAllShipsSunk } from '../lib/game';
 import { getAIMove } from '../lib/ai';
-import { Difficulty, GameState } from '../lib/types';
+import { Difficulty, GameState, Player } from '../lib/types';
+import { indexToCoord } from '../lib/coords';
 
 const SHIP_NAMES = ['Carrier', 'Battleship', 'Cruiser', 'Submarine', 'Destroyer'];
+
+type ActionResult = 'hit' | 'miss' | 'sunk';
+
+interface LastAction {
+  actor: Player;
+  index: number;
+  result: ActionResult;
+  shipName?: string;
+}
+
+function shipsRemaining(fleet: Set<number>[], attacks: Set<number>): number {
+  return fleet.filter((ship) => Array.from(ship).some((cell) => !attacks.has(cell))).length;
+}
+
+function resolveAttack(
+  index: number,
+  fleet: Set<number>[],
+  attacks: Set<number>
+): { result: ActionResult; shipName?: string } {
+  const shipIdx = fleet.findIndex((ship) => ship.has(index));
+  if (shipIdx === -1) return { result: 'miss' };
+  const ship = fleet[shipIdx];
+  const sunk = Array.from(ship).every((cell) => attacks.has(cell));
+  return sunk ? { result: 'sunk', shipName: SHIP_NAMES[shipIdx] } : { result: 'hit' };
+}
 
 const DIFFICULTIES: { value: Difficulty; label: string }[] = [
   { value: 'easy', label: 'Easy' },
@@ -65,6 +91,8 @@ const LEGEND = [
 export function Game() {
   const [difficulty, setDifficulty] = useState<Difficulty>('normal');
   const [game, setGame] = useState<GameState>(() => initializeGame('normal'));
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [lastAction, setLastAction] = useState<LastAction | null>(null);
 
   const handlePlayerAttack = (index: number) => {
     if (game.phase !== 'playing') return;
@@ -74,6 +102,8 @@ export function Game() {
     const newAttacks = new Set(game.playerAttacks);
     newAttacks.add(index);
     const isHit = game.aiShips.some((ship) => ship.has(index));
+    const { result, shipName } = resolveAttack(index, game.aiShips, newAttacks);
+    setLastAction({ actor: 'player', index, result, shipName });
 
     if (isAllShipsSunk(newAttacks, game.aiShips)) {
       setGame({
@@ -103,6 +133,8 @@ export function Game() {
       const newAttacks = new Set(game.aiAttacks);
       newAttacks.add(aiMove);
       const isHit = game.playerShips.some((ship) => ship.has(aiMove));
+      const { result, shipName } = resolveAttack(aiMove, game.playerShips, newAttacks);
+      setLastAction({ actor: 'ai', index: aiMove, result, shipName });
 
       if (isAllShipsSunk(newAttacks, game.playerShips)) {
         setGame({
@@ -128,6 +160,8 @@ export function Game() {
 
   const handleNewGame = () => {
     setGame(initializeGame(difficulty));
+    setLastAction(null);
+    setHoveredIndex(null);
   };
 
   useEffect(() => {
@@ -146,6 +180,32 @@ export function Game() {
   const accuracy = shots === 0 ? '0' : ((hits / shots) * 100).toFixed(1);
   const canChooseDifficulty = game.phase === 'ended' || game.playerAttacks.size === 0;
 
+  const enemyShipsRemaining = shipsRemaining(game.aiShips, game.playerAttacks);
+
+  const turnLabel =
+    game.phase === 'ended'
+      ? game.winner === 'player'
+        ? '🏆 You Win!'
+        : '💥 Enemy Wins'
+      : game.currentTurn === 'player'
+        ? '🎯 Your Turn'
+        : '⏳ Enemy Turn';
+
+  const actionResultLabel = (action: LastAction): string => {
+    if (action.result === 'sunk') return `Sunk ${action.shipName}`;
+    if (action.result === 'hit') return 'Hit';
+    return 'Miss';
+  };
+
+  const lastActionText = lastAction
+    ? `${lastAction.actor === 'player' ? 'You' : 'Enemy'}: ${actionResultLabel(lastAction)} at ${indexToCoord(lastAction.index)}`
+    : 'No actions yet';
+
+  const targetingText =
+    hoveredIndex !== null && game.currentTurn === 'player' && game.phase === 'playing'
+      ? `Targeting: ${indexToCoord(hoveredIndex)}`
+      : null;
+
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center p-4 md:p-8">
       <h1 className="text-3xl md:text-4xl font-bold text-slate-100 mb-2">BATTLESHIP</h1>
@@ -154,6 +214,16 @@ export function Game() {
       <p className="text-slate-300 text-xs md:text-sm mb-4 text-center">
         Shots: {shots} | Hits: {hits} | Accuracy: {accuracy}%
       </p>
+      <div className="w-full max-w-md bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 mb-6">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-base md:text-lg font-bold text-slate-100">{turnLabel}</span>
+          <span className="text-xs md:text-sm font-semibold text-slate-300">
+            Enemy Ships Remaining: <span className="text-emerald-400">{enemyShipsRemaining}</span>
+          </span>
+        </div>
+        <div className="mt-1 text-xs md:text-sm text-slate-400">Last Action: {lastActionText}</div>
+        <div className="mt-1 text-xs md:text-sm h-4 text-amber-400">{targetingText}</div>
+      </div>
       <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
         <FleetStatus title="Your Fleet" fleet={game.playerShips} attacks={game.aiAttacks} />
         <div className="flex flex-col sm:flex-row gap-4 sm:gap-8">
@@ -171,6 +241,7 @@ export function Game() {
             attacks={game.playerAttacks}
             showShips={game.phase === 'ended'}
             onCellClick={handlePlayerAttack}
+            onCellHover={setHoveredIndex}
             disabled={game.currentTurn !== 'player' || game.phase !== 'playing'}
           />
         </div>
