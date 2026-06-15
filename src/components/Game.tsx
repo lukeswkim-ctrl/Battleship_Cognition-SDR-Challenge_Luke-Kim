@@ -209,7 +209,7 @@ export function Game() {
       const wasHit = game.aiShips.some((ship) => ship.has(hoveredIndex));
       if (wasHit) {
         targetingText = `Already hit at ${coord}`;
-        targetingClass = 'text-red-400';
+        targetingClass = 'text-emerald-400';
       } else {
         targetingText = `Already missed at ${coord}`;
         targetingClass = 'text-slate-400';
