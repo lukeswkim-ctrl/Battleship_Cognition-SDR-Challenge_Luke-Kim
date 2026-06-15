@@ -5,6 +5,7 @@ interface CellProps {
   onClick: () => void;
   disabled: boolean;
   shipIndex?: number;
+  isTargetable?: boolean;
 }
 
 const stateColors: Record<CellState, string> = {
@@ -19,11 +20,23 @@ const stateAnimations: Partial<Record<CellState, string>> = {
   miss: 'cell-miss',
 };
 
-export function Cell({ state, onClick, disabled, shipIndex }: CellProps) {
+export function Cell({ state, onClick, disabled, shipIndex, isTargetable }: CellProps) {
   const colorClass =
     state === 'ship' && shipIndex !== undefined
       ? `cell-camo cell-camo-${shipIndex}`
       : stateColors[state];
+
+  let interactionClass: string;
+  if (disabled && (state === 'hit' || state === 'miss')) {
+    interactionClass = 'cursor-not-allowed opacity-70';
+  } else if (disabled) {
+    interactionClass = 'cursor-not-allowed opacity-60';
+  } else if (isTargetable) {
+    interactionClass =
+      'cursor-crosshair hover:ring-2 hover:ring-amber-400 hover:ring-inset hover:brightness-125 transition-all duration-100';
+  } else {
+    interactionClass = 'cursor-pointer hover:opacity-80';
+  }
 
   return (
     <button
@@ -32,9 +45,7 @@ export function Cell({ state, onClick, disabled, shipIndex }: CellProps) {
       disabled={disabled}
       className={`w-7 h-7 sm:w-9 sm:h-9 md:w-11 md:h-11 border border-slate-500 ${colorClass} ${
         stateAnimations[state] ?? ''
-      } ${
-        disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:opacity-80'
-      }`}
+      } ${interactionClass}`}
     />
   );
 }

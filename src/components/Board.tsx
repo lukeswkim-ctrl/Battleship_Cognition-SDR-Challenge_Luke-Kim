@@ -17,6 +17,7 @@ interface BoardProps {
   disabled: boolean;
   onCellHover?: (index: number | null) => void;
   flash?: CellFlash | null;
+  isTargetable?: boolean;
 }
 
 export function Board({
@@ -28,6 +29,7 @@ export function Board({
   disabled,
   onCellHover,
   flash,
+  isTargetable,
 }: BoardProps) {
   const getCellState = (index: number): CellState => {
     const isAttacked = attacks.has(index);
@@ -90,6 +92,7 @@ export function Board({
                   shipIndex={getShipIndex(index)}
                   onClick={() => onCellClick(index)}
                   disabled={disabled}
+                  isTargetable={isTargetable && !attacks.has(index)}
                 />
                 {flash && flash.index === index && (
                   <span className={`float-label float-label-${flash.kind}`}>{flash.text}</span>

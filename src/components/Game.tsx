@@ -285,6 +285,7 @@ export function Game() {
             onCellHover={setHoveredIndex}
             disabled={game.currentTurn !== 'player' || game.phase !== 'playing'}
             flash={playerFlash}
+            isTargetable={game.currentTurn === 'player' && game.phase === 'playing'}
           />
         </div>
         <FleetStatus title="Enemy Fleet" fleet={game.aiShips} attacks={game.playerAttacks} />
