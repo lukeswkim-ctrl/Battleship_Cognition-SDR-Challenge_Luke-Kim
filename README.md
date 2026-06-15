@@ -2,7 +2,7 @@
 
 Browser-based Battleship game: Human vs AI
 
-**Live Demo:** (https://battleship-cognition-challenge.netlify.app/)
+**Live Demo:** [Play Now](https://battleship-cognition-challenge.netlify.app/)
 
 ## Tech Stack
 
@@ -23,49 +23,87 @@ npm run build  # production build
 
 ## How to Play
 
-1. Click "New Game" to start
-2. Click cells on the AI board (right side) to attack
-3. Pick a difficulty (Easy / Normal / Hard) using the selector below the New Game button. The selector is always visible, but is **locked during an active game** — you can only change it before your first shot or after a game ends. The selected difficulty persists across New Game.
-4. Color key:
-   - `bg-blue-900` (navy) = empty water
-   - camo (per-ship military shade) = your ship — each of your 5 ships has its own camo color
-   - `bg-red-500` (red) = hit
-   - `bg-gray-400` (gray) = miss
-5. Sink all 5 enemy ships to win
-
-The on-screen legend shows Empty / Hit / Miss (your-ship camo is self-evident on your own board).
+1. Click **New Game** to start — ships are randomly placed (both horizontal and vertical orientations)
+2. Click cells on the **Enemy Waters** board (right side) to fire
+3. Pick a difficulty (**Easy / Normal / Hard**) using the selector below the New Game button. The selector is **locked during an active game** — you can only change it before your first shot or after a game ends. Your difficulty choice persists across sessions.
+4. **Status banner** at the top shows: whose turn it is, the last action (with coordinate), and how many enemy ships remain
+5. **Hover feedback** on the enemy board:
+   - **Amber** text = "Targeting: F6" (un-attacked cell)
+   - **Green** text = "Already hit at F6"
+   - **Gray** text = "Already missed at F6"
+6. Color key (also shown in the on-screen legend):
+   - Navy blue = empty water
+   - Camo shades = your ships (each ship has a unique camo color)
+   - Red = hit
+   - Orange with ✕ = sunk ship
+   - Gray = miss
+7. When you sink a ship, a **green toast** briefly appears ("You sank the enemy Cruiser!")
+8. When the AI sinks one of your ships, a **red toast** appears
+9. Sink all 5 enemy ships to win — a **Victory modal** shows your stats, accuracy, and mini board previews
 
 ## Game Rules
 
 - 5 ships per player: Carrier (5), Battleship (4), Cruiser (3), Submarine (3), Destroyer (2)
-- Ships are placed horizontally
-- Ships cannot be placed horizontally adjacent to each other (left/right gaps required; vertical stacking is allowed)
-- Turn-based gameplay
+- Ships are placed randomly in both horizontal and vertical orientations
+- Ships cannot overlap or extend off the board
+- Turn-based gameplay — you fire, then the AI fires
 - First to sink all opponent ships wins
 
 ## Features
 
-- Color-coded boards (empty / hit / miss) with per-ship camo coloring — each of your 5 ships renders in its own unique military camo shade
-- Fleet status panels on each side of the boards with per-ship hit tracking (size, hit %, and Afloat/partial/Sunk state)
-- Shot counter and accuracy stats (`Shots / Hits / Accuracy`)
-- Hit/miss animations (CSS keyframes: hit pulse, miss fade)
-- Smart AI with hunt/target mode (after a hit, the AI targets adjacent cells instead of firing randomly)
-- Difficulty levels: Easy (pure random), Normal (hunt/target), Hard (hunt/target + collinear targeting)
-- Difficulty selector (below New Game) stays visible at all times but is disabled mid-game, so the difficulty can't change once a game is underway; the choice carries over to the next New Game
-- Mobile-responsive layout (cells and fonts scale down; the 3-column layout collapses to a single stacked column on narrow screens)
-- Color legend (Empty / Hit / Miss) below the boards
+### Core Gameplay
+- Color-coded boards (empty / hit / miss / sunk) with per-ship camo coloring
+- Fleet status panels with per-ship hit tracking (size, hit %, health bar)
+- Shot counter and accuracy stats (`Shots | Hits | Accuracy`)
+- Hit/miss point-of-action animations (floating "HIT!" / "MISS" / "SUNK" tags)
+- Ship sink toasts (green for player sinks, red for AI sinks)
+- Sunk ships display orange cells with ✕ markers
+
+### AI & Difficulty
+- Smart AI with hunt/target mode (after a hit, targets adjacent cells)
+- **Easy:** pure random targeting
+- **Normal:** hunt/target (clusters shots around hits)
+- **Hard:** hunt/target + collinear targeting (follows the line of a hit ship)
+- Difficulty locked mid-game to prevent unfair switching
+
+### Status & Feedback
+- Persistent status banner: current turn, last action with coordinate, enemy ships remaining
+- Coordinate labels (A–J columns, 1–10 rows) on both boards
+- Hover targeting with color-coded feedback (amber/green/gray)
+- Crosshair cursor on targetable enemy cells
+
+### End-Game & Stats
+- **Victory/Defeat modal** with accuracy, ships sunk/lost, win streak, and mini board previews
+- **Lifetime Stats** panel (Games W-L, accuracy, current streak, best game) — click "Stats" below the difficulty selector
+- Stats and difficulty persist across sessions via localStorage
+- **Reset Stats** button with confirmation dialog
+
+### Layout & Responsive
+- 3-column desktop layout (Your Fleet panel → boards → Enemy Fleet panel)
+- Single-column stacked layout on narrow screens
+- Board titles left-aligned with column A
+- Difficulty selector centered below New Game button
+
+## Known Issues
+
+- **Rapid clicking (Bug 12):** Very fast clicks (≤30 ms intervals) during the AI turn delay can register multiple player shots in a single turn. This is a React stale-closure race condition. Under normal human play (~200 ms+ between clicks) this does not trigger. See `BUG_LOG.md` for details and a proposed fix.
 
 ## Project Structure
 
 ```
 src/
-├── lib/          # Core game logic
-│   ├── types.ts
-│   ├── game.ts
-│   └── ai.ts
-├── components/   # React components
-│   ├── Cell.tsx
-│   ├── Board.tsx
-│   └── Game.tsx
+├── lib/              # Core game logic
+│   ├── types.ts      # GameState, Difficulty, Player types
+│   ├── game.ts       # Ship placement, attack resolution
+│   ├── ai.ts         # AI targeting (random, hunt/target, collinear)
+│   ├── coords.ts     # Index ↔ coordinate helpers (A1–J10)
+│   └── storage.ts    # localStorage persistence (stats, difficulty)
+├── components/       # React components
+│   ├── Cell.tsx       # Individual board cell with hover/animation
+│   ├── Board.tsx      # 10×10 grid with coordinate labels
+│   ├── Game.tsx       # Main game controller
+│   ├── EndGameModal.tsx   # Victory/Defeat overlay
+│   ├── SinkToast.tsx      # Ship-sink notification toasts
+│   └── StatsPanel.tsx     # Lifetime stats panel
 └── App.tsx
 ```

@@ -1,10 +1,40 @@
-import { useEffect, useState } from 'react';
-import { Board } from './Board';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { Board, CellFlash } from './Board';
+import { EndGameModal } from './EndGameModal';
+import { SinkToast, SinkToastItem } from './SinkToast';
+import { StatsPanel } from './StatsPanel';
 import { initializeGame, isAllShipsSunk } from '../lib/game';
 import { getAIMove } from '../lib/ai';
-import { Difficulty, GameState } from '../lib/types';
+import { Difficulty, GameState, Player } from '../lib/types';
+import { indexToCoord } from '../lib/coords';
+import { loadDifficulty, saveDifficulty, loadStats, saveStats, resetStats, recordGameResult, LifetimeStats } from '../lib/storage';
 
 const SHIP_NAMES = ['Carrier', 'Battleship', 'Cruiser', 'Submarine', 'Destroyer'];
+
+type ActionResult = 'hit' | 'miss' | 'sunk';
+
+interface LastAction {
+  actor: Player;
+  index: number;
+  result: ActionResult;
+  shipName?: string;
+}
+
+function shipsRemaining(fleet: Set<number>[], attacks: Set<number>): number {
+  return fleet.filter((ship) => Array.from(ship).some((cell) => !attacks.has(cell))).length;
+}
+
+function resolveAttack(
+  index: number,
+  fleet: Set<number>[],
+  attacks: Set<number>
+): { result: ActionResult; shipName?: string } {
+  const shipIdx = fleet.findIndex((ship) => ship.has(index));
+  if (shipIdx === -1) return { result: 'miss' };
+  const ship = fleet[shipIdx];
+  const sunk = Array.from(ship).every((cell) => attacks.has(cell));
+  return sunk ? { result: 'sunk', shipName: SHIP_NAMES[shipIdx] } : { result: 'hit' };
+}
 
 const DIFFICULTIES: { value: Difficulty; label: string }[] = [
   { value: 'easy', label: 'Easy' },
@@ -59,12 +89,43 @@ function FleetStatus({
 const LEGEND = [
   { color: 'bg-blue-900', label: 'Empty' },
   { color: 'bg-red-500', label: 'Hit' },
+  { color: 'bg-orange-700 border border-orange-400', label: 'Sunk' },
   { color: 'bg-gray-400', label: 'Miss' },
 ];
 
 export function Game() {
-  const [difficulty, setDifficulty] = useState<Difficulty>('normal');
-  const [game, setGame] = useState<GameState>(() => initializeGame('normal'));
+  const [difficulty, setDifficulty] = useState<Difficulty>(() => loadDifficulty());
+  const [game, setGame] = useState<GameState>(() => initializeGame(loadDifficulty()));
+  const [lifetimeStats, setLifetimeStats] = useState<LifetimeStats>(() => loadStats());
+  const gameRecordedRef = useRef(false);
+  const [showEndModal, setShowEndModal] = useState(false);
+  const [sinkToasts, setSinkToasts] = useState<SinkToastItem[]>([]);
+  const toastIdRef = useRef(0);
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [lastAction, setLastAction] = useState<LastAction | null>(null);
+  const [playerFlash, setPlayerFlash] = useState<CellFlash | null>(null);
+  const [aiFlash, setAiFlash] = useState<CellFlash | null>(null);
+  const playerFlashTokRef = useRef(0);
+  const aiFlashTokRef = useRef(0);
+
+  const flashText = (result: ActionResult): string =>
+    result === 'sunk' ? 'SUNK' : result === 'hit' ? 'HIT!' : 'MISS';
+
+  const flashEnemyCell = (index: number, result: ActionResult) => {
+    const tok = ++playerFlashTokRef.current;
+    setPlayerFlash({ index, text: flashText(result), kind: result });
+    setTimeout(() => {
+      if (playerFlashTokRef.current === tok) setPlayerFlash(null);
+    }, 1000);
+  };
+
+  const flashPlayerCell = (index: number, result: ActionResult) => {
+    const tok = ++aiFlashTokRef.current;
+    setAiFlash({ index, text: flashText(result), kind: result });
+    setTimeout(() => {
+      if (aiFlashTokRef.current === tok) setAiFlash(null);
+    }, 1000);
+  };
 
   const handlePlayerAttack = (index: number) => {
     if (game.phase !== 'playing') return;
@@ -74,6 +135,13 @@ export function Game() {
     const newAttacks = new Set(game.playerAttacks);
     newAttacks.add(index);
     const isHit = game.aiShips.some((ship) => ship.has(index));
+    const { result, shipName } = resolveAttack(index, game.aiShips, newAttacks);
+    setLastAction({ actor: 'player', index, result, shipName });
+    flashEnemyCell(index, result);
+    if (result === 'sunk' && shipName) {
+      const id = ++toastIdRef.current;
+      setSinkToasts((prev) => [...prev, { id, message: `You sank the enemy ${shipName}!`, isPlayer: true }]);
+    }
 
     if (isAllShipsSunk(newAttacks, game.aiShips)) {
       setGame({
@@ -83,6 +151,7 @@ export function Game() {
         winner: 'player',
         message: 'You win! All enemy ships destroyed.',
       });
+      gameRecordedRef.current = false;
       return;
     }
 
@@ -103,6 +172,13 @@ export function Game() {
       const newAttacks = new Set(game.aiAttacks);
       newAttacks.add(aiMove);
       const isHit = game.playerShips.some((ship) => ship.has(aiMove));
+      const { result, shipName } = resolveAttack(aiMove, game.playerShips, newAttacks);
+      setLastAction({ actor: 'ai', index: aiMove, result, shipName });
+      flashPlayerCell(aiMove, result);
+      if (result === 'sunk' && shipName) {
+        const id = ++toastIdRef.current;
+        setSinkToasts((prev) => [...prev, { id, message: `The enemy sank your ${shipName}!`, isPlayer: false }]);
+      }
 
       if (isAllShipsSunk(newAttacks, game.playerShips)) {
         setGame({
@@ -112,6 +188,7 @@ export function Game() {
           winner: 'ai',
           message: 'AI wins! All your ships destroyed.',
         });
+        gameRecordedRef.current = false;
         return;
       }
 
@@ -128,7 +205,55 @@ export function Game() {
 
   const handleNewGame = () => {
     setGame(initializeGame(difficulty));
+    setLastAction(null);
+    setHoveredIndex(null);
+    setPlayerFlash(null);
+    setAiFlash(null);
+    gameRecordedRef.current = false;
+    setShowEndModal(false);
+    setSinkToasts([]);
   };
+
+  const handleDismissToast = useCallback((id: number) => {
+    setSinkToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
+  const handleChangeDifficulty = useCallback(() => {
+    setGame(initializeGame(difficulty));
+    setLastAction(null);
+    setHoveredIndex(null);
+    setPlayerFlash(null);
+    setAiFlash(null);
+    gameRecordedRef.current = false;
+    setShowEndModal(false);
+    setSinkToasts([]);
+  }, [difficulty]);
+
+  const handleDifficultyChange = useCallback((d: Difficulty) => {
+    setDifficulty(d);
+    saveDifficulty(d);
+  }, []);
+
+  const handleResetStats = useCallback(() => {
+    resetStats();
+    setLifetimeStats(loadStats());
+  }, []);
+
+  useEffect(() => {
+    if (game.phase === 'ended' && !gameRecordedRef.current) {
+      gameRecordedRef.current = true;
+      const won = game.winner === 'player';
+      const shotsFired = game.playerAttacks.size;
+      const hitsLanded = Array.from(game.playerAttacks).filter((idx) =>
+        game.aiShips.some((ship) => ship.has(idx))
+      ).length;
+      const updated = recordGameResult(lifetimeStats, won, shotsFired, hitsLanded, difficulty);
+      setLifetimeStats(updated);
+      saveStats(updated);
+      const timer = setTimeout(() => setShowEndModal(true), 300);
+      return () => clearTimeout(timer);
+    }
+  }, [game.phase]);
 
   useEffect(() => {
     if (game.currentTurn === 'ai' && game.phase === 'playing') {
@@ -146,15 +271,65 @@ export function Game() {
   const accuracy = shots === 0 ? '0' : ((hits / shots) * 100).toFixed(1);
   const canChooseDifficulty = game.phase === 'ended' || game.playerAttacks.size === 0;
 
+  const enemyShipsRemaining = shipsRemaining(game.aiShips, game.playerAttacks);
+
+  const turnLabel =
+    game.phase === 'ended'
+      ? game.winner === 'player'
+        ? '🏆 You Win!'
+        : '💥 Enemy Wins'
+      : game.currentTurn === 'player'
+        ? '🎯 Your Turn'
+        : '⏳ Enemy Turn';
+
+  const actionResultLabel = (action: LastAction): string => {
+    if (action.result === 'sunk') return `Sunk ${action.shipName}`;
+    if (action.result === 'hit') return 'Hit';
+    return 'Miss';
+  };
+
+  const lastActionText = lastAction
+    ? `${lastAction.actor === 'player' ? 'You' : 'Enemy'}: ${actionResultLabel(lastAction)} at ${indexToCoord(lastAction.index)}`
+    : 'No actions yet';
+
+  let targetingText: string | null = null;
+  let targetingClass = 'text-amber-400';
+  if (hoveredIndex !== null && game.currentTurn === 'player' && game.phase === 'playing') {
+    const coord = indexToCoord(hoveredIndex);
+    if (game.playerAttacks.has(hoveredIndex)) {
+      const wasHit = game.aiShips.some((ship) => ship.has(hoveredIndex));
+      if (wasHit) {
+        targetingText = `Already hit at ${coord}`;
+        targetingClass = 'text-emerald-400';
+      } else {
+        targetingText = `Already missed at ${coord}`;
+        targetingClass = 'text-slate-400';
+      }
+    } else {
+      targetingText = `Targeting: ${coord}`;
+      targetingClass = 'text-amber-400';
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center p-4 md:p-8">
+      <SinkToast toasts={sinkToasts} onDismiss={handleDismissToast} />
       <h1 className="text-3xl md:text-4xl font-bold text-slate-100 mb-2">BATTLESHIP</h1>
       <p className="text-sm md:text-base text-slate-400 mb-4">Sink all 5 enemy ships to win.</p>
-      <p className="text-base md:text-lg text-slate-300 mb-4 text-center">{game.message}</p>
       <p className="text-slate-300 text-xs md:text-sm mb-4 text-center">
         Shots: {shots} | Hits: {hits} | Accuracy: {accuracy}%
       </p>
-      <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
+      <div className="w-full max-w-md bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 mb-6">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-base md:text-lg font-bold text-slate-100">{turnLabel}</span>
+          <span className="text-xs md:text-sm font-semibold text-slate-300">
+            Enemy Ships Remaining: <span className="text-emerald-400">{enemyShipsRemaining}</span>
+          </span>
+        </div>
+        <div className="mt-1 text-xs md:text-sm text-slate-400">Last Action: {lastActionText}</div>
+        <div className={`mt-1 text-xs md:text-sm h-4 ${targetingClass}`}>{targetingText}</div>
+      </div>
+      <div className="flex flex-col md:flex-row items-center gap-6">
         <FleetStatus title="Your Fleet" fleet={game.playerShips} attacks={game.aiAttacks} />
         <div className="flex flex-col sm:flex-row gap-4 sm:gap-8">
           <Board
@@ -164,6 +339,7 @@ export function Game() {
             showShips={true}
             onCellClick={() => {}}
             disabled={true}
+            flash={aiFlash}
           />
           <Board
             title="Enemy Waters"
@@ -171,7 +347,10 @@ export function Game() {
             attacks={game.playerAttacks}
             showShips={game.phase === 'ended'}
             onCellClick={handlePlayerAttack}
+            onCellHover={setHoveredIndex}
             disabled={game.currentTurn !== 'player' || game.phase !== 'playing'}
+            flash={playerFlash}
+            isTargetable={game.currentTurn === 'player' && game.phase === 'playing'}
           />
         </div>
         <FleetStatus title="Enemy Fleet" fleet={game.aiShips} attacks={game.playerAttacks} />
@@ -192,25 +371,39 @@ export function Game() {
         >
           New Game
         </button>
-        <div className="flex flex-wrap justify-center items-center gap-2">
+        <div className="flex flex-col items-center gap-1">
           <span className="text-slate-400 text-xs md:text-sm">Difficulty:</span>
-          {DIFFICULTIES.map((d) => (
-            <button
-              key={d.value}
-              type="button"
-              onClick={() => setDifficulty(d.value)}
-              disabled={!canChooseDifficulty}
-              className={`px-3 py-1 rounded text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed ${
-                difficulty === d.value
-                  ? 'bg-emerald-600 text-white'
-                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-              }`}
-            >
-              {d.label}
-            </button>
-          ))}
+          <div className="flex flex-wrap justify-center items-center gap-2">
+            {DIFFICULTIES.map((d) => (
+              <button
+                key={d.value}
+                type="button"
+                onClick={() => handleDifficultyChange(d.value)}
+                disabled={!canChooseDifficulty}
+                className={`px-3 py-1 rounded text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed ${
+                  difficulty === d.value
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                }`}
+              >
+                {d.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
+      <div className="mt-4">
+        <StatsPanel stats={lifetimeStats} onReset={handleResetStats} />
+      </div>
+      {showEndModal && game.phase === 'ended' && (
+        <EndGameModal
+          game={game}
+          difficulty={difficulty}
+          lifetimeStats={lifetimeStats}
+          onPlayAgain={handleNewGame}
+          onChangeDifficulty={handleChangeDifficulty}
+        />
+      )}
     </div>
   );
 }
