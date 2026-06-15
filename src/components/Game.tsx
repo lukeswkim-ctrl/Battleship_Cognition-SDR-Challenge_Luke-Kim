@@ -202,13 +202,21 @@ export function Game() {
     : 'No actions yet';
 
   let targetingText: string | null = null;
+  let targetingClass = 'text-amber-400';
   if (hoveredIndex !== null && game.currentTurn === 'player' && game.phase === 'playing') {
     const coord = indexToCoord(hoveredIndex);
     if (game.playerAttacks.has(hoveredIndex)) {
       const wasHit = game.aiShips.some((ship) => ship.has(hoveredIndex));
-      targetingText = wasHit ? `Already hit at ${coord}` : `Already missed at ${coord}`;
+      if (wasHit) {
+        targetingText = `Already hit at ${coord}`;
+        targetingClass = 'text-red-400';
+      } else {
+        targetingText = `Already missed at ${coord}`;
+        targetingClass = 'text-slate-400';
+      }
     } else {
       targetingText = `Targeting: ${coord}`;
+      targetingClass = 'text-amber-400';
     }
   }
 
@@ -228,7 +236,7 @@ export function Game() {
           </span>
         </div>
         <div className="mt-1 text-xs md:text-sm text-slate-400">Last Action: {lastActionText}</div>
-        <div className="mt-1 text-xs md:text-sm h-4 text-amber-400">{targetingText}</div>
+        <div className={`mt-1 text-xs md:text-sm h-4 ${targetingClass}`}>{targetingText}</div>
       </div>
       <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
         <FleetStatus title="Your Fleet" fleet={game.playerShips} attacks={game.aiAttacks} />

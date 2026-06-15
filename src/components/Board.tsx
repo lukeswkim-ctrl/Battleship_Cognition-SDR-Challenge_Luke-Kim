@@ -71,15 +71,19 @@ export function Board({
           </div>
           <div className="grid grid-cols-10 gap-0.5 bg-slate-700 p-0.5">
             {Array.from({ length: 100 }, (_, index) => (
-              <Cell
+              <span
                 key={index}
-                state={getCellState(index)}
-                shipIndex={getShipIndex(index)}
-                onClick={() => onCellClick(index)}
+                className="flex"
                 onMouseEnter={onCellHover ? () => onCellHover(index) : undefined}
                 onMouseLeave={onCellHover ? () => onCellHover(null) : undefined}
-                disabled={disabled}
-              />
+              >
+                <Cell
+                  state={getCellState(index)}
+                  shipIndex={getShipIndex(index)}
+                  onClick={() => onCellClick(index)}
+                  disabled={disabled}
+                />
+              </span>
             ))}
           </div>
         </div>

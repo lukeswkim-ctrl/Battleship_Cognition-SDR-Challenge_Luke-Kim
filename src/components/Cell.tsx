@@ -5,8 +5,6 @@ interface CellProps {
   onClick: () => void;
   disabled: boolean;
   shipIndex?: number;
-  onMouseEnter?: () => void;
-  onMouseLeave?: () => void;
 }
 
 const stateColors: Record<CellState, string> = {
@@ -21,14 +19,7 @@ const stateAnimations: Partial<Record<CellState, string>> = {
   miss: 'cell-miss',
 };
 
-export function Cell({
-  state,
-  onClick,
-  disabled,
-  shipIndex,
-  onMouseEnter,
-  onMouseLeave,
-}: CellProps) {
+export function Cell({ state, onClick, disabled, shipIndex }: CellProps) {
   const colorClass =
     state === 'ship' && shipIndex !== undefined
       ? `cell-camo cell-camo-${shipIndex}`
@@ -38,8 +29,6 @@ export function Cell({
     <button
       type="button"
       onClick={onClick}
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
       disabled={disabled}
       className={`w-7 h-7 sm:w-9 sm:h-9 md:w-11 md:h-11 border border-slate-500 ${colorClass} ${
         stateAnimations[state] ?? ''
