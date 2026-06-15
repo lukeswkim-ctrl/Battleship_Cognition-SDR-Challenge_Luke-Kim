@@ -1,9 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { Board, CellFlash } from './Board';
+import { StatsPanel } from './StatsPanel';
 import { initializeGame, isAllShipsSunk } from '../lib/game';
 import { getAIMove } from '../lib/ai';
 import { Difficulty, GameState, Player } from '../lib/types';
 import { indexToCoord } from '../lib/coords';
+import { loadDifficulty, saveDifficulty, loadStats, saveStats, resetStats, recordGameResult, LifetimeStats } from '../lib/storage';
 
 const SHIP_NAMES = ['Carrier', 'Battleship', 'Cruiser', 'Submarine', 'Destroyer'];
 
@@ -89,8 +91,10 @@ const LEGEND = [
 ];
 
 export function Game() {
-  const [difficulty, setDifficulty] = useState<Difficulty>('normal');
-  const [game, setGame] = useState<GameState>(() => initializeGame('normal'));
+  const [difficulty, setDifficulty] = useState<Difficulty>(() => loadDifficulty());
+  const [game, setGame] = useState<GameState>(() => initializeGame(loadDifficulty()));
+  const [lifetimeStats, setLifetimeStats] = useState<LifetimeStats>(() => loadStats());
+  const gameRecordedRef = useRef(false);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [lastAction, setLastAction] = useState<LastAction | null>(null);
   const [playerFlash, setPlayerFlash] = useState<CellFlash | null>(null);
@@ -137,6 +141,7 @@ export function Game() {
         winner: 'player',
         message: 'You win! All enemy ships destroyed.',
       });
+      gameRecordedRef.current = false;
       return;
     }
 
@@ -169,6 +174,7 @@ export function Game() {
           winner: 'ai',
           message: 'AI wins! All your ships destroyed.',
         });
+        gameRecordedRef.current = false;
         return;
       }
 
@@ -189,7 +195,32 @@ export function Game() {
     setHoveredIndex(null);
     setPlayerFlash(null);
     setAiFlash(null);
+    gameRecordedRef.current = false;
   };
+
+  const handleDifficultyChange = useCallback((d: Difficulty) => {
+    setDifficulty(d);
+    saveDifficulty(d);
+  }, []);
+
+  const handleResetStats = useCallback(() => {
+    resetStats();
+    setLifetimeStats(loadStats());
+  }, []);
+
+  useEffect(() => {
+    if (game.phase === 'ended' && !gameRecordedRef.current) {
+      gameRecordedRef.current = true;
+      const won = game.winner === 'player';
+      const shotsFired = game.playerAttacks.size;
+      const hitsLanded = Array.from(game.playerAttacks).filter((idx) =>
+        game.aiShips.some((ship) => ship.has(idx))
+      ).length;
+      const updated = recordGameResult(lifetimeStats, won, shotsFired, hitsLanded, difficulty);
+      setLifetimeStats(updated);
+      saveStats(updated);
+    }
+  }, [game.phase]);
 
   useEffect(() => {
     if (game.currentTurn === 'ai' && game.phase === 'playing') {
@@ -313,7 +344,7 @@ export function Game() {
               <button
                 key={d.value}
                 type="button"
-                onClick={() => setDifficulty(d.value)}
+                onClick={() => handleDifficultyChange(d.value)}
                 disabled={!canChooseDifficulty}
                 className={`px-3 py-1 rounded text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed ${
                   difficulty === d.value
@@ -326,6 +357,9 @@ export function Game() {
             ))}
           </div>
         </div>
+      </div>
+      <div className="mt-4">
+        <StatsPanel stats={lifetimeStats} onReset={handleResetStats} />
       </div>
     </div>
   );
