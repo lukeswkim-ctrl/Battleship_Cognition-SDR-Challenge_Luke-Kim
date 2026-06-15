@@ -2,6 +2,12 @@ import { Cell } from './Cell';
 import { CellState } from '../lib/types';
 import { COLUMN_LABELS, ROW_LABELS } from '../lib/coords';
 
+export interface CellFlash {
+  index: number;
+  text: string;
+  kind: 'hit' | 'miss' | 'sunk';
+}
+
 interface BoardProps {
   title: string;
   ships: Set<number>[];
@@ -10,6 +16,7 @@ interface BoardProps {
   onCellClick: (index: number) => void;
   disabled: boolean;
   onCellHover?: (index: number | null) => void;
+  flash?: CellFlash | null;
 }
 
 export function Board({
@@ -20,6 +27,7 @@ export function Board({
   onCellClick,
   disabled,
   onCellHover,
+  flash,
 }: BoardProps) {
   const getCellState = (index: number): CellState => {
     const isAttacked = attacks.has(index);
@@ -73,7 +81,7 @@ export function Board({
             {Array.from({ length: 100 }, (_, index) => (
               <span
                 key={index}
-                className="flex"
+                className="relative flex"
                 onMouseEnter={onCellHover ? () => onCellHover(index) : undefined}
                 onMouseLeave={onCellHover ? () => onCellHover(null) : undefined}
               >
@@ -83,6 +91,9 @@ export function Board({
                   onClick={() => onCellClick(index)}
                   disabled={disabled}
                 />
+                {flash && flash.index === index && (
+                  <span className={`float-label float-label-${flash.kind}`}>{flash.text}</span>
+                )}
               </span>
             ))}
           </div>

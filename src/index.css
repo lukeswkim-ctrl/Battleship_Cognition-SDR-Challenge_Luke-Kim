@@ -47,19 +47,46 @@ body {
   animation: cell-miss-ripple 400ms ease-out;
 }
 
-@keyframes toast-in {
-  from {
-    transform: translateX(120%);
+@keyframes float-label-rise {
+  0% {
+    transform: translate(-50%, 0);
     opacity: 0;
   }
-  to {
-    transform: translateX(0);
+  20% {
+    transform: translate(-50%, -6px);
     opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -26px);
+    opacity: 0;
   }
 }
 
-.toast-enter {
-  animation: toast-in 220ms ease-out;
+.float-label {
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  transform: translate(-50%, 0);
+  pointer-events: none;
+  z-index: 20;
+  font-weight: 800;
+  font-size: 11px;
+  line-height: 1;
+  white-space: nowrap;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  animation: float-label-rise 1000ms ease-out forwards;
+}
+
+.float-label-hit {
+  color: #f87171;
+}
+
+.float-label-sunk {
+  color: #fb923c;
+}
+
+.float-label-miss {
+  color: #cbd5e1;
 }
 
 .cell-camo {
