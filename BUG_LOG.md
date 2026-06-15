@@ -274,7 +274,7 @@ A full adversarial playthrough (13 test scenarios, recorded) found **1 new bug**
 7. **Full victory** — all 5 ships sunk, VICTORY modal with correct stats — PASSED
 8. **Stats persistence** — stats + difficulty survive page reload — PASSED
 9. **localStorage clear** — graceful reset to defaults, no crash — PASSED
-10. **Rapid clicking during AI turn** — multiple shots registered — **FAILED (Bug 12)**
+10. **Rapid clicking during AI turn** — multiple shots registered — **FAILED (Bug 12) - UPDATE: FIXED / PASSED**
 11. **Own-board clicks** — all player cells disabled, no effect — PASSED
 12. **Change Difficulty modal button** — closes modal, resets game, enables selector — PASSED
 13. **Reset Stats** — confirmation dialog, zeroes all stats — PASSED
