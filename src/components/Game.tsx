@@ -3,7 +3,7 @@ import { Board, CellFlash } from './Board';
 import { EndGameModal } from './EndGameModal';
 import { SinkToast, SinkToastItem } from './SinkToast';
 import { StatsPanel } from './StatsPanel';
-import { initializeGame, isAllShipsSunk } from '../lib/game';
+import { initializeGame, isAllShipsSunk, loadGameState, saveGameState, clearGameState } from '../lib/game';
 import { getAIMove } from '../lib/ai';
 import { Difficulty, GameState, Player } from '../lib/types';
 import { indexToCoord } from '../lib/coords';
@@ -95,7 +95,10 @@ const LEGEND = [
 
 export function Game() {
   const [difficulty, setDifficulty] = useState<Difficulty>(() => loadDifficulty());
-  const [game, setGame] = useState<GameState>(() => initializeGame(loadDifficulty()));
+  const [game, setGame] = useState<GameState>(() => {
+    const saved = loadGameState();
+    return saved ?? initializeGame(loadDifficulty());
+  });
   const [lifetimeStats, setLifetimeStats] = useState<LifetimeStats>(() => loadStats());
   const gameRecordedRef = useRef(false);
   const [showEndModal, setShowEndModal] = useState(false);
@@ -167,7 +170,7 @@ export function Game() {
     });
   };
 
-  const handleAIAttack = () => {
+  const handleAIAttack = useCallback(() => {
     if (game.phase !== 'playing') return;
     if (game.currentTurn !== 'ai') return;
 
@@ -207,10 +210,18 @@ export function Game() {
       console.error('AI move failed:', error);
       attackLockRef.current = false;
     }
-  };
+  }, [game, difficulty]);
 
   const handleNewGame = () => {
+    const inProgress = game.phase === 'playing' && game.playerAttacks.size > 0;
+    if (inProgress) {
+      const confirmed = window.confirm(
+        'A game is in progress. Start a new game? All progress will be lost.'
+      );
+      if (!confirmed) return;
+    }
     attackLockRef.current = false;
+    clearGameState();
     setGame(initializeGame(difficulty));
     setLastAction(null);
     setHoveredIndex(null);
@@ -264,13 +275,27 @@ export function Game() {
   }, [game.phase]);
 
   useEffect(() => {
+    saveGameState(game);
+  }, [game]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (game.phase === 'playing' && game.playerAttacks.size > 0) {
+        e.preventDefault();
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [game.phase, game.playerAttacks.size]);
+
+  useEffect(() => {
     if (game.currentTurn === 'ai' && game.phase === 'playing') {
       const timer = setTimeout(() => {
         handleAIAttack();
       }, 600);
       return () => clearTimeout(timer);
     }
-  }, [game.currentTurn, game.phase]);
+  }, [game.currentTurn, game.phase, handleAIAttack]);
 
   const shots = game.playerAttacks.size;
   const hits = Array.from(game.playerAttacks).filter((index) =>

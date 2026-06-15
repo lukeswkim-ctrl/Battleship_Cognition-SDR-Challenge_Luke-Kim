@@ -5,6 +5,8 @@ import {
   placeAllShips,
   isAllShipsSunk,
   initializeGame,
+  serializeGameState,
+  deserializeGameState,
 } from '../src/lib/game';
 import { getAIMove } from '../src/lib/ai';
 
@@ -252,5 +254,55 @@ describe('initializeGame', () => {
 
   it('accepts a difficulty argument', () => {
     expect(initializeGame('hard').difficulty).toBe('hard');
+  });
+});
+
+describe('isValidPlacement vertical', () => {
+  it('vertical: length 3, start 5, empty → true', () => {
+    expect(isValidPlacement(5, 3, new Set(), 'vertical')).toBe(true);
+  });
+
+  it('vertical: length 3, start 85, empty → false (out of bounds)', () => {
+    expect(isValidPlacement(85, 3, new Set(), 'vertical')).toBe(false);
+  });
+
+  it('vertical: length 5, start 0, empty → true (top edge)', () => {
+    expect(isValidPlacement(0, 5, new Set(), 'vertical')).toBe(true);
+  });
+
+  it('vertical: length 5, start 50, empty → true', () => {
+    expect(isValidPlacement(50, 5, new Set(), 'vertical')).toBe(true);
+  });
+
+  it('vertical: length 5, start 60, empty → false (overflows bottom)', () => {
+    expect(isValidPlacement(60, 5, new Set(), 'vertical')).toBe(false);
+  });
+});
+
+describe('serializeGameState / deserializeGameState', () => {
+  it('round-trips a game state', () => {
+    const original = initializeGame('hard');
+    const json = serializeGameState(original);
+    const restored = deserializeGameState(json);
+    expect(restored).not.toBeNull();
+    expect(restored!.phase).toBe(original.phase);
+    expect(restored!.difficulty).toBe('hard');
+    expect(restored!.playerShips.length).toBe(5);
+    expect(restored!.playerAttacks.size).toBe(0);
+  });
+
+  it('returns null for invalid JSON', () => {
+    expect(deserializeGameState('not json')).toBeNull();
+  });
+});
+
+describe('getAIMove sunk-ship filtering', () => {
+  it('Normal: does not target neighbors of fully sunk ships', () => {
+    const playerShips = [new Set([45, 46]), new Set([80, 81])];
+    const previousAttacks = new Set([45, 46]);
+    for (let i = 0; i < 50; i++) {
+      const move = getAIMove(previousAttacks, playerShips, 'normal');
+      expect(previousAttacks.has(move)).toBe(false);
+    }
   });
 });

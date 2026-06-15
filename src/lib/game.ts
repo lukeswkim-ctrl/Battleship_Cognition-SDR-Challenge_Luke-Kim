@@ -97,3 +97,52 @@ export function initializeGame(difficulty: Difficulty = 'normal'): GameState {
     message: 'Your turn. Click enemy waters to attack.',
   };
 }
+
+const GAME_STATE_KEY = 'battleship-game-state';
+
+export function serializeGameState(state: GameState): string {
+  return JSON.stringify({
+    ...state,
+    playerShips: state.playerShips.map((s) => Array.from(s)),
+    aiShips: state.aiShips.map((s) => Array.from(s)),
+    playerAttacks: Array.from(state.playerAttacks),
+    aiAttacks: Array.from(state.aiAttacks),
+  });
+}
+
+export function deserializeGameState(json: string): GameState | null {
+  try {
+    const data = JSON.parse(json);
+    return {
+      ...data,
+      playerShips: data.playerShips.map((arr: number[]) => new Set(arr)),
+      aiShips: data.aiShips.map((arr: number[]) => new Set(arr)),
+      playerAttacks: new Set(data.playerAttacks),
+      aiAttacks: new Set(data.aiAttacks),
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function loadGameState(): GameState | null {
+  try {
+    const json = localStorage.getItem(GAME_STATE_KEY);
+    if (!json) return null;
+    return deserializeGameState(json);
+  } catch {
+    return null;
+  }
+}
+
+export function saveGameState(state: GameState): void {
+  try {
+    localStorage.setItem(GAME_STATE_KEY, serializeGameState(state));
+  } catch { /* full storage or private browsing */ }
+}
+
+export function clearGameState(): void {
+  try {
+    localStorage.removeItem(GAME_STATE_KEY);
+  } catch { /* ignore */ }
+}

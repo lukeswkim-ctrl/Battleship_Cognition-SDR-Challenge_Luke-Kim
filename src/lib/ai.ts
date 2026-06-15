@@ -43,9 +43,13 @@ export function getAIMove(
     return pickRandom(available);
   }
 
-  // Confirmed hits: attacked cells that belong to a player ship.
+  // Confirmed hits: attacked cells that belong to a player ship (exclude fully-sunk ships).
   const confirmedHits = Array.from(previousAttacks).filter((cell) =>
-    playerShips.some((ship) => ship.has(cell))
+    playerShips.some((ship) => {
+      if (!ship.has(cell)) return false;
+      const allHit = Array.from(ship).every((c) => previousAttacks.has(c));
+      return !allHit;
+    })
   );
 
   if (confirmedHits.length === 0) {
