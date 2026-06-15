@@ -201,10 +201,16 @@ export function Game() {
     ? `${lastAction.actor === 'player' ? 'You' : 'Enemy'}: ${actionResultLabel(lastAction)} at ${indexToCoord(lastAction.index)}`
     : 'No actions yet';
 
-  const targetingText =
-    hoveredIndex !== null && game.currentTurn === 'player' && game.phase === 'playing'
-      ? `Targeting: ${indexToCoord(hoveredIndex)}`
-      : null;
+  let targetingText: string | null = null;
+  if (hoveredIndex !== null && game.currentTurn === 'player' && game.phase === 'playing') {
+    const coord = indexToCoord(hoveredIndex);
+    if (game.playerAttacks.has(hoveredIndex)) {
+      const wasHit = game.aiShips.some((ship) => ship.has(hoveredIndex));
+      targetingText = wasHit ? `Already hit at ${coord}` : `Already missed at ${coord}`;
+    } else {
+      targetingText = `Targeting: ${coord}`;
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center p-4 md:p-8">
