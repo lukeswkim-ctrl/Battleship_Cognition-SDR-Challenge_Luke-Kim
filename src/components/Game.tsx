@@ -150,11 +150,10 @@ export function Game() {
     <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center p-4 md:p-8">
       <h1 className="text-3xl md:text-4xl font-bold text-slate-100 mb-2">BATTLESHIP</h1>
       <p className="text-sm md:text-base text-slate-400 mb-4">Sink all 5 enemy ships to win.</p>
-      <p className="text-base md:text-lg text-slate-300 mb-4 text-center">{game.message}</p>
       <p className="text-slate-300 text-xs md:text-sm mb-4 text-center">
         Shots: {shots} | Hits: {hits} | Accuracy: {accuracy}%
       </p>
-      <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
+      <div className="flex flex-col md:flex-row items-center gap-6">
         <FleetStatus title="Your Fleet" fleet={game.playerShips} attacks={game.aiAttacks} />
         <div className="flex flex-col sm:flex-row gap-4 sm:gap-8">
           <Board
