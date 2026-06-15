@@ -201,6 +201,35 @@ at, Result.**
 
 ---
 
+## Bug 12 — Rapid clicks during AI turn register multiple player shots
+
+- **Phase:** Comprehensive adversarial E2E testing (PR #13)
+- **Severity:** P1 — High (gameplay integrity: player can fire multiple times per turn)
+- **Symptom:** Clicking rapidly on enemy cells (≤30 ms between clicks) allows
+  multiple player shots to register in a single turn before the AI gets to move.
+  Reproduced consistently: 3 rapid clicks at 30 ms intervals → all 3 registered
+  (Shots jumped from 0 to 3). The turn guard in `handlePlayerAttack` checks
+  `game.currentTurn !== 'player'`, but React's `setGame` is asynchronous —
+  subsequent clicks arrive before the state update commits `currentTurn: 'ai'`,
+  so the guard passes for every queued click.
+- **Root cause:** `handlePlayerAttack` reads `game.currentTurn` from the closure
+  captured at render time. Between `setGame({...game, currentTurn: 'ai'})`
+  being called and React re-rendering with the new state, any click events
+  already in the browser's event queue will still see `currentTurn === 'player'`
+  and pass the guard. This is a classic React stale-closure race condition.
+- **Possible fix:** Add a `useRef` lock (`isProcessingRef`) that is set
+  synchronously at the top of `handlePlayerAttack` and cleared after the AI
+  turn completes. Refs update immediately (not on next render), so they block
+  subsequent clicks even before React re-renders. Alternatively, disable all
+  enemy board buttons immediately via a `useState` flag set before `setGame`.
+- **Caught at:** Adversarial rapid-click testing with Playwright (30 ms click
+  intervals).
+- **Result:** **Open / unfixed.** Under normal human play (~200 ms+ between
+  clicks) this is unlikely to trigger, but it is a real race condition that
+  programmatic or very fast clicks can exploit.
+
+---
+
 ## Verification
 
 - `npm test` → 41/41 passing
@@ -228,3 +257,23 @@ defects** found:
    placement, difficulty preserved.
 8. Responsive layout — the 3-column layout collapses to a single stacked column
    on narrow screens and cells/fonts scale down.
+
+### Comprehensive adversarial E2E test (PR #13)
+
+A full adversarial playthrough (13 test scenarios, recorded) found **1 new bug**
+(Bug 12 above). All other scenarios passed:
+
+1. **Ship placement** — 5 ships, 17 cells, H/V mix, no overlaps — PASSED
+2. **Basic gameplay** — hit=red, miss=gray, AI turn correct, stats update — PASSED
+3. **Re-click ignored** — duplicate click on attacked cell ignored — PASSED
+4. **New Game reset** — stats to 0, boards cleared, new placement, difficulty persisted — PASSED
+5. **Difficulty lock** — all 3 buttons disabled after first shot — PASSED
+6. **Responsive layout** — single-column collapse at narrow width — PASSED
+7. **Full victory** — all 5 ships sunk, VICTORY modal with correct stats — PASSED
+8. **Stats persistence** — stats + difficulty survive page reload — PASSED
+9. **localStorage clear** — graceful reset to defaults, no crash — PASSED
+10. **Rapid clicking during AI turn** — multiple shots registered — **FAILED (Bug 12)**
+11. **Own-board clicks** — all player cells disabled, no effect — PASSED
+12. **Change Difficulty modal button** — closes modal, resets game, enables selector — PASSED
+13. **Reset Stats** — confirmation dialog, zeroes all stats — PASSED
+14. **DEFEAT modal** — red headline, correct stats, Play Again + Change Difficulty — PASSED
