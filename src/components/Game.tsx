@@ -107,6 +107,7 @@ export function Game() {
   const [aiFlash, setAiFlash] = useState<CellFlash | null>(null);
   const playerFlashTokRef = useRef(0);
   const aiFlashTokRef = useRef(0);
+  const attackLockRef = useRef(false);
 
   const flashText = (result: ActionResult): string =>
     result === 'sunk' ? 'SUNK' : result === 'hit' ? 'HIT!' : 'MISS';
@@ -130,7 +131,10 @@ export function Game() {
   const handlePlayerAttack = (index: number) => {
     if (game.phase !== 'playing') return;
     if (game.currentTurn !== 'player') return;
+    if (attackLockRef.current) return;
     if (game.playerAttacks.has(index)) return;
+
+    attackLockRef.current = true;
 
     const newAttacks = new Set(game.playerAttacks);
     newAttacks.add(index);
@@ -198,12 +202,15 @@ export function Game() {
         currentTurn: 'player',
         message: isHit ? 'AI hit your ship!' : 'AI missed.',
       });
+      attackLockRef.current = false;
     } catch (error) {
       console.error('AI move failed:', error);
+      attackLockRef.current = false;
     }
   };
 
   const handleNewGame = () => {
+    attackLockRef.current = false;
     setGame(initializeGame(difficulty));
     setLastAction(null);
     setHoveredIndex(null);
@@ -219,6 +226,7 @@ export function Game() {
   }, []);
 
   const handleChangeDifficulty = useCallback(() => {
+    attackLockRef.current = false;
     setGame(initializeGame(difficulty));
     setLastAction(null);
     setHoveredIndex(null);

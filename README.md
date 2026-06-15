@@ -86,7 +86,7 @@ npm run build  # production build
 
 ## Known Issues
 
-- **Rapid clicking (Bug 12):** Very fast clicks (≤30 ms intervals) during the AI turn delay can register multiple player shots in a single turn. This is a React stale-closure race condition. Under normal human play (~200 ms+ between clicks) this does not trigger. See `BUG_LOG.md` for details and a proposed fix.
+- ~~**Rapid clicking (Bug 12):**~~ Fixed. A synchronous `useRef` lock now prevents multiple shots from registering during the same turn, regardless of click speed. See `BUG_LOG.md` for the full write-up.
 
 ## Project Structure
 
