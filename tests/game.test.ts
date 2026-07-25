@@ -294,6 +294,31 @@ describe('serializeGameState / deserializeGameState', () => {
   it('returns null for invalid JSON', () => {
     expect(deserializeGameState('not json')).toBeNull();
   });
+
+  it('rejects tampered payloads', () => {
+    const valid = JSON.parse(serializeGameState(initializeGame('normal')));
+    const tamperings: Record<string, unknown>[] = [
+      { phase: 'cheating' },
+      { currentTurn: 'nobody' },
+      { difficulty: 'impossible' },
+      { winner: 'draw' },
+      { message: 42 },
+      { playerAttacks: [100] },
+      { playerAttacks: [1.5] },
+      { aiAttacks: 'all' },
+      { aiShips: [] },
+      { playerShips: [[0], [1], [2], [3], [4]] },
+    ];
+    for (const patch of tamperings) {
+      expect(deserializeGameState(JSON.stringify({ ...valid, ...patch }))).toBeNull();
+    }
+  });
+
+  it('truncates an over-long message', () => {
+    const valid = JSON.parse(serializeGameState(initializeGame('normal')));
+    const restored = deserializeGameState(JSON.stringify({ ...valid, message: 'x'.repeat(5000) }));
+    expect(restored!.message.length).toBe(200);
+  });
 });
 
 describe('getAIMove sunk-ship filtering', () => {

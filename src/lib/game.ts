@@ -110,19 +110,63 @@ export function serializeGameState(state: GameState): string {
   });
 }
 
+const SHIP_LENGTHS = [5, 4, 3, 3, 2];
+
+function isCellIndex(value: unknown): value is number {
+  return Number.isInteger(value) && (value as number) >= 0 && (value as number) <= 99;
+}
+
+function parseCellSet(value: unknown): Set<number> | null {
+  if (!Array.isArray(value) || !value.every(isCellIndex)) return null;
+  return new Set<number>(value);
+}
+
+function parseFleet(value: unknown): Set<number>[] | null {
+  if (!Array.isArray(value) || value.length !== SHIP_LENGTHS.length) return null;
+  const fleet: Set<number>[] = [];
+  for (let i = 0; i < value.length; i++) {
+    const ship = parseCellSet(value[i]);
+    if (ship === null || ship.size !== SHIP_LENGTHS[i]) return null;
+    fleet.push(ship);
+  }
+  return fleet;
+}
+
 export function deserializeGameState(json: string): GameState | null {
+  let data: unknown;
   try {
-    const data = JSON.parse(json);
-    return {
-      ...data,
-      playerShips: data.playerShips.map((arr: number[]) => new Set(arr)),
-      aiShips: data.aiShips.map((arr: number[]) => new Set(arr)),
-      playerAttacks: new Set(data.playerAttacks),
-      aiAttacks: new Set(data.aiAttacks),
-    };
+    data = JSON.parse(json);
   } catch {
     return null;
   }
+  if (typeof data !== 'object' || data === null) return null;
+
+  const raw = data as Record<string, unknown>;
+  if (raw.phase !== 'playing' && raw.phase !== 'ended') return null;
+  if (raw.currentTurn !== 'player' && raw.currentTurn !== 'ai') return null;
+  if (raw.difficulty !== 'easy' && raw.difficulty !== 'normal' && raw.difficulty !== 'hard') {
+    return null;
+  }
+  if (raw.winner !== null && raw.winner !== 'player' && raw.winner !== 'ai') return null;
+  if (typeof raw.message !== 'string') return null;
+
+  const playerShips = parseFleet(raw.playerShips);
+  const aiShips = parseFleet(raw.aiShips);
+  const playerAttacks = parseCellSet(raw.playerAttacks);
+  const aiAttacks = parseCellSet(raw.aiAttacks);
+  if (!playerShips || !aiShips || !playerAttacks || !aiAttacks) return null;
+
+  return {
+    phase: raw.phase,
+    currentTurn: raw.currentTurn,
+    difficulty: raw.difficulty,
+    winner: raw.winner,
+    message: raw.message.slice(0, 200),
+    playerShips,
+    aiShips,
+    playerAttacks,
+    aiAttacks,
+  };
 }
 
 export function loadGameState(): GameState | null {
