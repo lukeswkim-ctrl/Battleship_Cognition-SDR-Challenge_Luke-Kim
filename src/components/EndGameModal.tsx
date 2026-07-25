@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { MiniBoard } from './MiniBoard';
 import { Difficulty, GameState } from '../lib/types';
+import { DIFFICULTY_LABELS } from '../lib/difficulty';
+import { accuracyPercent, countHits, countSunkShips } from '../lib/fleet';
 import { LifetimeStats } from '../lib/storage';
 
 interface EndGameModalProps {
@@ -10,12 +12,6 @@ interface EndGameModalProps {
   onPlayAgain: () => void;
   onChangeDifficulty: () => void;
 }
-
-const DIFF_LABELS: Record<Difficulty, string> = {
-  easy: 'Easy',
-  normal: 'Normal',
-  hard: 'Hard',
-};
 
 export function EndGameModal({
   game,
@@ -28,18 +24,12 @@ export function EndGameModal({
 
   const won = game.winner === 'player';
   const shots = game.playerAttacks.size;
-  const hits = Array.from(game.playerAttacks).filter((idx) =>
-    game.aiShips.some((ship) => ship.has(idx))
-  ).length;
-  const accuracy = shots === 0 ? 0 : (hits / shots) * 100;
+  const hits = countHits(game.aiShips, game.playerAttacks);
+  const accuracy = accuracyPercent(hits, shots);
   const totalTurns = game.playerAttacks.size + game.aiAttacks.size;
 
-  const enemySunk = game.aiShips.filter((ship) =>
-    Array.from(ship).every((cell) => game.playerAttacks.has(cell))
-  ).length;
-  const playerLost = game.playerShips.filter((ship) =>
-    Array.from(ship).every((cell) => game.aiAttacks.has(cell))
-  ).length;
+  const enemySunk = countSunkShips(game.aiShips, game.playerAttacks);
+  const playerLost = countSunkShips(game.playerShips, game.aiAttacks);
 
   useEffect(() => {
     primaryRef.current?.focus();
@@ -70,7 +60,7 @@ export function EndGameModal({
           {won ? 'VICTORY' : 'DEFEAT'}
         </h2>
         <p className="text-center text-slate-400 text-sm mb-4">
-          {DIFF_LABELS[difficulty]} · {totalTurns} turns
+          {DIFFICULTY_LABELS[difficulty]} · {totalTurns} turns
         </p>
 
         <div className="grid grid-cols-2 gap-3 text-sm mb-4">

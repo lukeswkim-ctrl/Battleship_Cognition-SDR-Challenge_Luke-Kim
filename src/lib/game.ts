@@ -1,9 +1,12 @@
 import { Difficulty, GameState } from './types';
+import { BOARD_SIZE, CELL_COUNT, inBounds, rowOf, sameRow } from './coords';
+import { isShipSunk } from './fleet';
+import { readItem, removeItem, writeItem } from './persist';
 
 export type Orientation = 'horizontal' | 'vertical';
 
 function shipCells(startIndex: number, length: number, orientation: Orientation): number[] {
-  const step = orientation === 'horizontal' ? 1 : 10;
+  const step = orientation === 'horizontal' ? 1 : BOARD_SIZE;
   const cells: number[] = [];
   for (let i = 0; i < length; i++) {
     cells.push(startIndex + i * step);
@@ -17,31 +20,26 @@ export function isValidPlacement(
   occupied: Set<number>,
   orientation: Orientation = 'horizontal'
 ): boolean {
-  if (startIndex < 0 || startIndex > 99) return false;
+  if (!inBounds(startIndex)) return false;
 
-  if (orientation === 'horizontal') {
-    if (startIndex + length - 1 > 99) return false;
-    const startRow = Math.floor(startIndex / 10);
-    const endRow = Math.floor((startIndex + length - 1) / 10);
-    if (startRow !== endRow) return false;
-  } else {
-    if (startIndex + (length - 1) * 10 > 99) return false;
-  }
+  const endIndex =
+    orientation === 'horizontal' ? startIndex + length - 1 : startIndex + (length - 1) * BOARD_SIZE;
+  if (!inBounds(endIndex)) return false;
+  if (orientation === 'horizontal' && rowOf(startIndex) !== rowOf(endIndex)) return false;
 
   for (const cell of shipCells(startIndex, length, orientation)) {
     if (occupied.has(cell)) return false;
 
     if (orientation === 'horizontal') {
-      const cellRow = Math.floor(cell / 10);
       const left = cell - 1;
       const right = cell + 1;
-      if (Math.floor(left / 10) === cellRow && occupied.has(left)) return false;
-      if (Math.floor(right / 10) === cellRow && occupied.has(right)) return false;
+      if (sameRow(left, cell) && occupied.has(left)) return false;
+      if (sameRow(right, cell) && occupied.has(right)) return false;
     } else {
-      const up = cell - 10;
-      const down = cell + 10;
-      if (up >= 0 && occupied.has(up)) return false;
-      if (down <= 99 && occupied.has(down)) return false;
+      const up = cell - BOARD_SIZE;
+      const down = cell + BOARD_SIZE;
+      if (inBounds(up) && occupied.has(up)) return false;
+      if (inBounds(down) && occupied.has(down)) return false;
     }
   }
 
@@ -51,7 +49,7 @@ export function isValidPlacement(
 export function placeShip(length: number, occupied: Set<number>): Set<number> {
   for (let attempt = 0; attempt < 1000; attempt++) {
     const orientation: Orientation = Math.random() < 0.5 ? 'horizontal' : 'vertical';
-    const startIndex = Math.floor(Math.random() * 100);
+    const startIndex = Math.floor(Math.random() * CELL_COUNT);
     if (isValidPlacement(startIndex, length, occupied, orientation)) {
       return new Set<number>(shipCells(startIndex, length, orientation));
     }
@@ -79,9 +77,7 @@ export function isAllShipsSunk(
   attacks: Set<number>,
   ships: Set<number>[]
 ): boolean {
-  return ships.every((ship) =>
-    Array.from(ship).every((cell) => attacks.has(cell))
-  );
+  return ships.every((ship) => isShipSunk(ship, attacks));
 }
 
 export function initializeGame(difficulty: Difficulty = 'normal'): GameState {
@@ -126,23 +122,15 @@ export function deserializeGameState(json: string): GameState | null {
 }
 
 export function loadGameState(): GameState | null {
-  try {
-    const json = localStorage.getItem(GAME_STATE_KEY);
-    if (!json) return null;
-    return deserializeGameState(json);
-  } catch {
-    return null;
-  }
+  const json = readItem(GAME_STATE_KEY);
+  if (!json) return null;
+  return deserializeGameState(json);
 }
 
 export function saveGameState(state: GameState): void {
-  try {
-    localStorage.setItem(GAME_STATE_KEY, serializeGameState(state));
-  } catch { /* full storage or private browsing */ }
+  writeItem(GAME_STATE_KEY, serializeGameState(state));
 }
 
 export function clearGameState(): void {
-  try {
-    localStorage.removeItem(GAME_STATE_KEY);
-  } catch { /* ignore */ }
+  removeItem(GAME_STATE_KEY);
 }

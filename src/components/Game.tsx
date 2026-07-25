@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { MutableRefObject, useEffect, useRef, useState, useCallback } from 'react';
 import { Board, CellFlash } from './Board';
 import { EndGameModal } from './EndGameModal';
 import { SinkToast, SinkToastItem } from './SinkToast';
@@ -7,9 +7,16 @@ import { initializeGame, isAllShipsSunk, loadGameState, saveGameState, clearGame
 import { getAIMove } from '../lib/ai';
 import { Difficulty, GameState, Player } from '../lib/types';
 import { indexToCoord } from '../lib/coords';
+import { DIFFICULTY_OPTIONS } from '../lib/difficulty';
+import {
+  SHIP_NAMES,
+  countHits,
+  formatAccuracy,
+  isHitOn,
+  isShipSunk,
+  shipsRemaining,
+} from '../lib/fleet';
 import { loadDifficulty, saveDifficulty, loadStats, saveStats, resetStats, recordGameResult, LifetimeStats } from '../lib/storage';
-
-const SHIP_NAMES = ['Carrier', 'Battleship', 'Cruiser', 'Submarine', 'Destroyer'];
 
 type ActionResult = 'hit' | 'miss' | 'sunk';
 
@@ -20,10 +27,6 @@ interface LastAction {
   shipName?: string;
 }
 
-function shipsRemaining(fleet: Set<number>[], attacks: Set<number>): number {
-  return fleet.filter((ship) => Array.from(ship).some((cell) => !attacks.has(cell))).length;
-}
-
 function resolveAttack(
   index: number,
   fleet: Set<number>[],
@@ -31,16 +34,9 @@ function resolveAttack(
 ): { result: ActionResult; shipName?: string } {
   const shipIdx = fleet.findIndex((ship) => ship.has(index));
   if (shipIdx === -1) return { result: 'miss' };
-  const ship = fleet[shipIdx];
-  const sunk = Array.from(ship).every((cell) => attacks.has(cell));
+  const sunk = isShipSunk(fleet[shipIdx], attacks);
   return sunk ? { result: 'sunk', shipName: SHIP_NAMES[shipIdx] } : { result: 'hit' };
 }
-
-const DIFFICULTIES: { value: Difficulty; label: string }[] = [
-  { value: 'easy', label: 'Easy' },
-  { value: 'normal', label: 'Normal' },
-  { value: 'hard', label: 'Hard' },
-];
 
 function FleetStatus({
   title,
@@ -115,21 +111,41 @@ export function Game() {
   const flashText = (result: ActionResult): string =>
     result === 'sunk' ? 'SUNK' : result === 'hit' ? 'HIT!' : 'MISS';
 
-  const flashEnemyCell = (index: number, result: ActionResult) => {
-    const tok = ++playerFlashTokRef.current;
-    setPlayerFlash({ index, text: flashText(result), kind: result });
+  const flashCell = (
+    tokenRef: MutableRefObject<number>,
+    setFlash: (flash: CellFlash | null) => void,
+    index: number,
+    result: ActionResult
+  ) => {
+    const tok = ++tokenRef.current;
+    setFlash({ index, text: flashText(result), kind: result });
     setTimeout(() => {
-      if (playerFlashTokRef.current === tok) setPlayerFlash(null);
+      if (tokenRef.current === tok) setFlash(null);
     }, 1000);
   };
 
-  const flashPlayerCell = (index: number, result: ActionResult) => {
-    const tok = ++aiFlashTokRef.current;
-    setAiFlash({ index, text: flashText(result), kind: result });
-    setTimeout(() => {
-      if (aiFlashTokRef.current === tok) setAiFlash(null);
-    }, 1000);
+  const flashEnemyCell = (index: number, result: ActionResult) =>
+    flashCell(playerFlashTokRef, setPlayerFlash, index, result);
+
+  const flashPlayerCell = (index: number, result: ActionResult) =>
+    flashCell(aiFlashTokRef, setAiFlash, index, result);
+
+  const pushSinkToast = (message: string, isPlayer: boolean) => {
+    const id = ++toastIdRef.current;
+    setSinkToasts((prev) => [...prev, { id, message, isPlayer }]);
   };
+
+  const startGame = useCallback((next: GameState) => {
+    attackLockRef.current = false;
+    setGame(next);
+    setLastAction(null);
+    setHoveredIndex(null);
+    setPlayerFlash(null);
+    setAiFlash(null);
+    gameRecordedRef.current = false;
+    setShowEndModal(false);
+    setSinkToasts([]);
+  }, []);
 
   const handlePlayerAttack = (index: number) => {
     if (game.phase !== 'playing') return;
@@ -141,13 +157,12 @@ export function Game() {
 
     const newAttacks = new Set(game.playerAttacks);
     newAttacks.add(index);
-    const isHit = game.aiShips.some((ship) => ship.has(index));
+    const isHit = isHitOn(game.aiShips, index);
     const { result, shipName } = resolveAttack(index, game.aiShips, newAttacks);
     setLastAction({ actor: 'player', index, result, shipName });
     flashEnemyCell(index, result);
     if (result === 'sunk' && shipName) {
-      const id = ++toastIdRef.current;
-      setSinkToasts((prev) => [...prev, { id, message: `You sank the enemy ${shipName}!`, isPlayer: true }]);
+      pushSinkToast(`You sank the enemy ${shipName}!`, true);
     }
 
     if (isAllShipsSunk(newAttacks, game.aiShips)) {
@@ -178,13 +193,12 @@ export function Game() {
       const aiMove = getAIMove(game.aiAttacks, game.playerShips, difficulty);
       const newAttacks = new Set(game.aiAttacks);
       newAttacks.add(aiMove);
-      const isHit = game.playerShips.some((ship) => ship.has(aiMove));
+      const isHit = isHitOn(game.playerShips, aiMove);
       const { result, shipName } = resolveAttack(aiMove, game.playerShips, newAttacks);
       setLastAction({ actor: 'ai', index: aiMove, result, shipName });
       flashPlayerCell(aiMove, result);
       if (result === 'sunk' && shipName) {
-        const id = ++toastIdRef.current;
-        setSinkToasts((prev) => [...prev, { id, message: `The enemy sank your ${shipName}!`, isPlayer: false }]);
+        pushSinkToast(`The enemy sank your ${shipName}!`, false);
       }
 
       if (isAllShipsSunk(newAttacks, game.playerShips)) {
@@ -220,16 +234,8 @@ export function Game() {
       );
       if (!confirmed) return;
     }
-    attackLockRef.current = false;
     clearGameState();
-    setGame(initializeGame(difficulty));
-    setLastAction(null);
-    setHoveredIndex(null);
-    setPlayerFlash(null);
-    setAiFlash(null);
-    gameRecordedRef.current = false;
-    setShowEndModal(false);
-    setSinkToasts([]);
+    startGame(initializeGame(difficulty));
   };
 
   const handleDismissToast = useCallback((id: number) => {
@@ -237,16 +243,8 @@ export function Game() {
   }, []);
 
   const handleChangeDifficulty = useCallback(() => {
-    attackLockRef.current = false;
-    setGame(initializeGame(difficulty));
-    setLastAction(null);
-    setHoveredIndex(null);
-    setPlayerFlash(null);
-    setAiFlash(null);
-    gameRecordedRef.current = false;
-    setShowEndModal(false);
-    setSinkToasts([]);
-  }, [difficulty]);
+    startGame(initializeGame(difficulty));
+  }, [difficulty, startGame]);
 
   const handleDifficultyChange = useCallback((d: Difficulty) => {
     setDifficulty(d);
@@ -263,9 +261,7 @@ export function Game() {
       gameRecordedRef.current = true;
       const won = game.winner === 'player';
       const shotsFired = game.playerAttacks.size;
-      const hitsLanded = Array.from(game.playerAttacks).filter((idx) =>
-        game.aiShips.some((ship) => ship.has(idx))
-      ).length;
+      const hitsLanded = countHits(game.aiShips, game.playerAttacks);
       const updated = recordGameResult(lifetimeStats, won, shotsFired, hitsLanded, difficulty);
       setLifetimeStats(updated);
       saveStats(updated);
@@ -298,10 +294,8 @@ export function Game() {
   }, [game.currentTurn, game.phase, handleAIAttack]);
 
   const shots = game.playerAttacks.size;
-  const hits = Array.from(game.playerAttacks).filter((index) =>
-    game.aiShips.some((ship) => ship.has(index))
-  ).length;
-  const accuracy = shots === 0 ? '0' : ((hits / shots) * 100).toFixed(1);
+  const hits = countHits(game.aiShips, game.playerAttacks);
+  const accuracy = shots === 0 ? '0' : formatAccuracy(hits, shots);
   const canChooseDifficulty = game.phase === 'ended' || game.playerAttacks.size === 0;
 
   const enemyShipsRemaining = shipsRemaining(game.aiShips, game.playerAttacks);
@@ -330,7 +324,7 @@ export function Game() {
   if (hoveredIndex !== null && game.currentTurn === 'player' && game.phase === 'playing') {
     const coord = indexToCoord(hoveredIndex);
     if (game.playerAttacks.has(hoveredIndex)) {
-      const wasHit = game.aiShips.some((ship) => ship.has(hoveredIndex));
+      const wasHit = isHitOn(game.aiShips, hoveredIndex);
       if (wasHit) {
         targetingText = `Already hit at ${coord}`;
         targetingClass = 'text-emerald-400';
@@ -407,7 +401,7 @@ export function Game() {
         <div className="flex flex-col items-center gap-1">
           <span className="text-slate-400 text-xs md:text-sm">Difficulty:</span>
           <div className="flex flex-wrap justify-center items-center gap-2">
-            {DIFFICULTIES.map((d) => (
+            {DIFFICULTY_OPTIONS.map((d) => (
               <button
                 key={d.value}
                 type="button"

@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { DIFFICULTY_LABELS, isDifficulty } from '../lib/difficulty';
+import { formatAccuracy } from '../lib/fleet';
 import { LifetimeStats } from '../lib/storage';
 
 interface StatsPanelProps {
@@ -11,12 +13,13 @@ export function StatsPanel({ stats, onReset }: StatsPanelProps) {
   const [confirmReset, setConfirmReset] = useState(false);
 
   const lifetimeAccuracy =
-    stats.totalShotsFired === 0
-      ? '0'
-      : ((stats.totalHits / stats.totalShotsFired) * 100).toFixed(1);
+    stats.totalShotsFired === 0 ? '0' : formatAccuracy(stats.totalHits, stats.totalShotsFired);
 
+  const bestGameDifficulty = stats.bestGame?.difficulty;
   const bestGameLabel = stats.bestGame
-    ? `${stats.bestGame.shots} shots on ${stats.bestGame.difficulty.charAt(0).toUpperCase() + stats.bestGame.difficulty.slice(1)} (${stats.bestGame.date})`
+    ? `${stats.bestGame.shots} shots on ${
+        isDifficulty(bestGameDifficulty) ? DIFFICULTY_LABELS[bestGameDifficulty] : bestGameDifficulty
+      } (${stats.bestGame.date})`
     : '—';
 
   const handleReset = () => {
