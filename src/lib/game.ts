@@ -110,19 +110,65 @@ export function serializeGameState(state: GameState): string {
   });
 }
 
+function isFleetArray(value: unknown): value is number[][] {
+  return (
+    Array.isArray(value) &&
+    value.every(
+      (ship) => Array.isArray(ship) && ship.every((cell) => typeof cell === 'number')
+    )
+  );
+}
+
+function isNumberArray(value: unknown): value is number[] {
+  return Array.isArray(value) && value.every((cell) => typeof cell === 'number');
+}
+
+function isValidSerializedState(data: unknown): data is {
+  phase: unknown;
+  currentTurn: unknown;
+  difficulty: unknown;
+  winner: unknown;
+  message: unknown;
+  playerShips: number[][];
+  aiShips: number[][];
+  playerAttacks: number[];
+  aiAttacks: number[];
+} {
+  if (typeof data !== 'object' || data === null) return false;
+  const d = data as Record<string, unknown>;
+  return (
+    (d.phase === 'playing' || d.phase === 'ended') &&
+    (d.currentTurn === 'player' || d.currentTurn === 'ai') &&
+    isFleetArray(d.playerShips) &&
+    isFleetArray(d.aiShips) &&
+    isNumberArray(d.playerAttacks) &&
+    isNumberArray(d.aiAttacks)
+  );
+}
+
 export function deserializeGameState(json: string): GameState | null {
+  let data: unknown;
   try {
-    const data = JSON.parse(json);
-    return {
-      ...data,
-      playerShips: data.playerShips.map((arr: number[]) => new Set(arr)),
-      aiShips: data.aiShips.map((arr: number[]) => new Set(arr)),
-      playerAttacks: new Set(data.playerAttacks),
-      aiAttacks: new Set(data.aiAttacks),
-    };
-  } catch {
+    data = JSON.parse(json);
+  } catch (error) {
+    console.warn('Discarding saved game: could not parse stored state.', error);
     return null;
   }
+
+  if (!isValidSerializedState(data)) {
+    console.warn('Discarding saved game: stored state is missing or malformed.');
+    return null;
+  }
+
+  return {
+    ...(data as object),
+    phase: data.phase as GameState['phase'],
+    currentTurn: data.currentTurn as GameState['currentTurn'],
+    playerShips: data.playerShips.map((arr) => new Set(arr)),
+    aiShips: data.aiShips.map((arr) => new Set(arr)),
+    playerAttacks: new Set(data.playerAttacks),
+    aiAttacks: new Set(data.aiAttacks),
+  } as GameState;
 }
 
 export function loadGameState(): GameState | null {
@@ -130,7 +176,8 @@ export function loadGameState(): GameState | null {
     const json = localStorage.getItem(GAME_STATE_KEY);
     if (!json) return null;
     return deserializeGameState(json);
-  } catch {
+  } catch (error) {
+    console.warn('Could not read saved game from localStorage.', error);
     return null;
   }
 }
@@ -138,11 +185,17 @@ export function loadGameState(): GameState | null {
 export function saveGameState(state: GameState): void {
   try {
     localStorage.setItem(GAME_STATE_KEY, serializeGameState(state));
-  } catch { /* full storage or private browsing */ }
+  } catch (error) {
+    // Expected when storage is full or unavailable (e.g. private browsing);
+    // the game keeps running in memory.
+    console.warn('Could not persist game state.', error);
+  }
 }
 
 export function clearGameState(): void {
   try {
     localStorage.removeItem(GAME_STATE_KEY);
-  } catch { /* ignore */ }
+  } catch (error) {
+    console.warn('Could not clear saved game state.', error);
+  }
 }

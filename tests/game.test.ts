@@ -294,6 +294,29 @@ describe('serializeGameState / deserializeGameState', () => {
   it('returns null for invalid JSON', () => {
     expect(deserializeGameState('not json')).toBeNull();
   });
+
+  it('returns null when required fields are missing', () => {
+    expect(deserializeGameState(JSON.stringify({ phase: 'playing' }))).toBeNull();
+  });
+
+  it('returns null for an invalid phase value', () => {
+    const original = initializeGame();
+    const data = JSON.parse(serializeGameState(original));
+    data.phase = 'bogus';
+    expect(deserializeGameState(JSON.stringify(data))).toBeNull();
+  });
+
+  it('returns null when a fleet is malformed', () => {
+    const original = initializeGame();
+    const data = JSON.parse(serializeGameState(original));
+    data.playerShips = 'not-an-array';
+    expect(deserializeGameState(JSON.stringify(data))).toBeNull();
+  });
+
+  it('returns null for a JSON primitive', () => {
+    expect(deserializeGameState('42')).toBeNull();
+    expect(deserializeGameState('null')).toBeNull();
+  });
 });
 
 describe('getAIMove sunk-ship filtering', () => {

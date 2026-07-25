@@ -207,7 +207,15 @@ export function Game() {
       });
       attackLockRef.current = false;
     } catch (error) {
+      // The AI failed to produce a move (e.g. no cells left to attack). Rather
+      // than leaving the game frozen on the AI's turn with no feedback, hand the
+      // turn back to the player and surface the failure in the status line.
       console.error('AI move failed:', error);
+      setGame({
+        ...game,
+        currentTurn: 'player',
+        message: 'The enemy could not move. Your turn.',
+      });
       attackLockRef.current = false;
     }
   }, [game, difficulty]);
