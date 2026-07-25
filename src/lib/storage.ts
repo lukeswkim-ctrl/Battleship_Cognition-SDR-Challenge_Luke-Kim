@@ -55,24 +55,59 @@ export function saveDifficulty(d: Difficulty): void {
   } catch { /* full storage or private browsing */ }
 }
 
+const COUNTER_FIELDS = [
+  'gamesPlayed',
+  'wins',
+  'losses',
+  'totalShotsFired',
+  'totalHits',
+  'currentStreak',
+  'bestAccuracy',
+] as const;
+
+function isNonNegativeNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0;
+}
+
+function parseBestGame(value: unknown): LifetimeStats['bestGame'] | undefined {
+  if (value === null || value === undefined) return null;
+  if (typeof value !== 'object') return undefined;
+  const raw = value as Record<string, unknown>;
+  if (
+    !isNonNegativeNumber(raw.shots) ||
+    typeof raw.difficulty !== 'string' ||
+    typeof raw.date !== 'string'
+  ) {
+    return undefined;
+  }
+  return {
+    shots: raw.shots,
+    difficulty: raw.difficulty.slice(0, 20),
+    date: raw.date.slice(0, 10),
+  };
+}
+
+function parseStats(value: unknown): LifetimeStats | null {
+  if (typeof value !== 'object' || value === null) return null;
+  const raw = value as Record<string, unknown>;
+  if (raw.version !== CURRENT_VERSION) return null;
+  if (!COUNTER_FIELDS.every((field) => isNonNegativeNumber(raw[field]))) return null;
+  const bestGame = parseBestGame(raw.bestGame);
+  if (bestGame === undefined) return null;
+
+  const stats: LifetimeStats = { ...DEFAULT_STATS, bestGame };
+  for (const field of COUNTER_FIELDS) {
+    stats[field] = raw[field] as number;
+  }
+  return stats;
+}
+
 export function loadStats(): LifetimeStats {
   if (!storageAvailable()) return { ...DEFAULT_STATS };
   try {
     const raw = localStorage.getItem(STATS_KEY);
     if (!raw) return { ...DEFAULT_STATS };
-    const parsed = JSON.parse(raw);
-    if (
-      typeof parsed !== 'object' ||
-      parsed === null ||
-      typeof parsed.version !== 'number' ||
-      typeof parsed.gamesPlayed !== 'number'
-    ) {
-      return { ...DEFAULT_STATS };
-    }
-    if (parsed.version < CURRENT_VERSION) {
-      return { ...DEFAULT_STATS };
-    }
-    return parsed as LifetimeStats;
+    return parseStats(JSON.parse(raw)) ?? { ...DEFAULT_STATS };
   } catch {
     return { ...DEFAULT_STATS };
   }
