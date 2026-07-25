@@ -44,7 +44,9 @@ export function loadDifficulty(): Difficulty {
   try {
     const raw = localStorage.getItem(DIFFICULTY_KEY);
     if (raw === 'easy' || raw === 'normal' || raw === 'hard') return raw;
-  } catch { /* graceful fallback */ }
+  } catch (error) {
+    console.warn('Could not read saved difficulty; using default.', error);
+  }
   return 'normal';
 }
 
@@ -52,7 +54,9 @@ export function saveDifficulty(d: Difficulty): void {
   if (!storageAvailable()) return;
   try {
     localStorage.setItem(DIFFICULTY_KEY, d);
-  } catch { /* full storage or private browsing */ }
+  } catch (error) {
+    console.warn('Could not persist difficulty setting.', error);
+  }
 }
 
 export function loadStats(): LifetimeStats {
@@ -67,13 +71,15 @@ export function loadStats(): LifetimeStats {
       typeof parsed.version !== 'number' ||
       typeof parsed.gamesPlayed !== 'number'
     ) {
+      console.warn('Saved stats are malformed; resetting to defaults.');
       return { ...DEFAULT_STATS };
     }
     if (parsed.version < CURRENT_VERSION) {
       return { ...DEFAULT_STATS };
     }
     return parsed as LifetimeStats;
-  } catch {
+  } catch (error) {
+    console.warn('Could not read saved stats; resetting to defaults.', error);
     return { ...DEFAULT_STATS };
   }
 }
@@ -82,14 +88,18 @@ export function saveStats(stats: LifetimeStats): void {
   if (!storageAvailable()) return;
   try {
     localStorage.setItem(STATS_KEY, JSON.stringify(stats));
-  } catch { /* full storage */ }
+  } catch (error) {
+    console.warn('Could not persist lifetime stats.', error);
+  }
 }
 
 export function resetStats(): void {
   if (!storageAvailable()) return;
   try {
     localStorage.removeItem(STATS_KEY);
-  } catch { /* ignore */ }
+  } catch (error) {
+    console.warn('Could not reset stored stats.', error);
+  }
 }
 
 export function recordGameResult(
