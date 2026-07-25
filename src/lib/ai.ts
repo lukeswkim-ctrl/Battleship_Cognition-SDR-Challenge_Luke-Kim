@@ -1,27 +1,15 @@
 import { Difficulty } from './types';
+import { BOARD_SIZE, CELL_COUNT, adjacentCells, inBounds, sameRow } from './coords';
+import { isShipSunk } from './fleet';
 
 function getUnattacked(previousAttacks: Set<number>): number[] {
   const available: number[] = [];
-  for (let index = 0; index < 100; index++) {
+  for (let index = 0; index < CELL_COUNT; index++) {
     if (!previousAttacks.has(index)) {
       available.push(index);
     }
   }
   return available;
-}
-
-function adjacentCells(cell: number): number[] {
-  const row = Math.floor(cell / 10);
-  const neighbors: number[] = [];
-  const up = cell - 10;
-  const down = cell + 10;
-  const left = cell - 1;
-  const right = cell + 1;
-  if (up >= 0) neighbors.push(up);
-  if (down <= 99) neighbors.push(down);
-  if (left >= 0 && Math.floor(left / 10) === row) neighbors.push(left);
-  if (right <= 99 && Math.floor(right / 10) === row) neighbors.push(right);
-  return neighbors;
 }
 
 function pickRandom(cells: number[]): number {
@@ -45,11 +33,7 @@ export function getAIMove(
 
   // Confirmed hits: attacked cells that belong to a player ship (exclude fully-sunk ships).
   const confirmedHits = Array.from(previousAttacks).filter((cell) =>
-    playerShips.some((ship) => {
-      if (!ship.has(cell)) return false;
-      const allHit = Array.from(ship).every((c) => previousAttacks.has(c));
-      return !allHit;
-    })
+    playerShips.some((ship) => ship.has(cell) && !isShipSunk(ship, previousAttacks))
   );
 
   if (confirmedHits.length === 0) {
@@ -69,24 +53,18 @@ export function getAIMove(
 
       const min = shipHits[0];
       const max = shipHits[shipHits.length - 1];
-      const sameRow = shipHits.every(
-        (c) => Math.floor(c / 10) === Math.floor(min / 10)
-      );
-      const step = sameRow ? 1 : 10;
+      const isHorizontal = shipHits.every((c) => sameRow(c, min));
+      const step = isHorizontal ? 1 : BOARD_SIZE;
       const before = min - step;
       const after = max + step;
 
       const collinear: number[] = [];
-      if (sameRow) {
-        if (before >= 0 && Math.floor(before / 10) === Math.floor(min / 10)) {
-          collinear.push(before);
-        }
-        if (after <= 99 && Math.floor(after / 10) === Math.floor(max / 10)) {
-          collinear.push(after);
-        }
+      if (isHorizontal) {
+        if (inBounds(before) && sameRow(before, min)) collinear.push(before);
+        if (inBounds(after) && sameRow(after, max)) collinear.push(after);
       } else {
-        if (before >= 0) collinear.push(before);
-        if (after <= 99) collinear.push(after);
+        if (inBounds(before)) collinear.push(before);
+        if (inBounds(after)) collinear.push(after);
       }
 
       const collinearTargets = collinear.filter((c) => !previousAttacks.has(c));

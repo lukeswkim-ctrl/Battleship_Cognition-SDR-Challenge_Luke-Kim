@@ -1,4 +1,7 @@
 import { Difficulty } from './types';
+import { isDifficulty } from './difficulty';
+import { accuracyPercent } from './fleet';
+import { readItem, removeItem, writeItem } from './persist';
 
 const DIFFICULTY_KEY = 'battleship_difficulty';
 const STATS_KEY = 'battleship_stats';
@@ -41,25 +44,20 @@ function storageAvailable(): boolean {
 
 export function loadDifficulty(): Difficulty {
   if (!storageAvailable()) return 'normal';
-  try {
-    const raw = localStorage.getItem(DIFFICULTY_KEY);
-    if (raw === 'easy' || raw === 'normal' || raw === 'hard') return raw;
-  } catch { /* graceful fallback */ }
-  return 'normal';
+  const raw = readItem(DIFFICULTY_KEY);
+  return isDifficulty(raw) ? raw : 'normal';
 }
 
 export function saveDifficulty(d: Difficulty): void {
   if (!storageAvailable()) return;
-  try {
-    localStorage.setItem(DIFFICULTY_KEY, d);
-  } catch { /* full storage or private browsing */ }
+  writeItem(DIFFICULTY_KEY, d);
 }
 
 export function loadStats(): LifetimeStats {
   if (!storageAvailable()) return { ...DEFAULT_STATS };
+  const raw = readItem(STATS_KEY);
+  if (!raw) return { ...DEFAULT_STATS };
   try {
-    const raw = localStorage.getItem(STATS_KEY);
-    if (!raw) return { ...DEFAULT_STATS };
     const parsed = JSON.parse(raw);
     if (
       typeof parsed !== 'object' ||
@@ -80,16 +78,12 @@ export function loadStats(): LifetimeStats {
 
 export function saveStats(stats: LifetimeStats): void {
   if (!storageAvailable()) return;
-  try {
-    localStorage.setItem(STATS_KEY, JSON.stringify(stats));
-  } catch { /* full storage */ }
+  writeItem(STATS_KEY, JSON.stringify(stats));
 }
 
 export function resetStats(): void {
   if (!storageAvailable()) return;
-  try {
-    localStorage.removeItem(STATS_KEY);
-  } catch { /* ignore */ }
+  removeItem(STATS_KEY);
 }
 
 export function recordGameResult(
@@ -99,7 +93,7 @@ export function recordGameResult(
   hits: number,
   difficulty: string
 ): LifetimeStats {
-  const accuracy = shots === 0 ? 0 : (hits / shots) * 100;
+  const accuracy = accuracyPercent(hits, shots);
   const next: LifetimeStats = {
     ...prev,
     gamesPlayed: prev.gamesPlayed + 1,

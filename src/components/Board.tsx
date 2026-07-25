@@ -1,6 +1,7 @@
 import { Cell } from './Cell';
 import { CellState } from '../lib/types';
-import { COLUMN_LABELS, ROW_LABELS } from '../lib/coords';
+import { CELL_COUNT, COLUMN_LABELS, ROW_LABELS } from '../lib/coords';
+import { cellStateAt, sunkShipCells } from '../lib/fleet';
 
 export interface CellFlash {
   index: number;
@@ -31,27 +32,14 @@ export function Board({
   flash,
   isTargetable,
 }: BoardProps) {
-  const getCellState = (index: number): CellState => {
-    const isAttacked = attacks.has(index);
-    const isShip = ships.some((ship) => ship.has(index));
-
-    if (isAttacked && isShip) return 'hit';
-    if (isAttacked) return 'miss';
-    if (showShips && isShip) return 'ship';
-    return 'empty';
-  };
+  const getCellState = (index: number): CellState => cellStateAt(index, ships, attacks, showShips);
 
   const getShipIndex = (index: number): number | undefined => {
     const shipIndex = ships.findIndex((ship) => ship.has(index));
     return shipIndex === -1 ? undefined : shipIndex;
   };
 
-  const sunkCells = new Set<number>();
-  for (const ship of ships) {
-    if (Array.from(ship).every((cell) => attacks.has(cell))) {
-      for (const cell of ship) sunkCells.add(cell);
-    }
-  }
+  const sunkCells = sunkShipCells(ships, attacks);
 
   const rowLabelClass = 'w-4 sm:w-5 md:w-6 shrink-0';
   const cellLabelClass = 'w-7 sm:w-9 md:w-11 shrink-0';
@@ -87,7 +75,7 @@ export function Board({
             ))}
           </div>
           <div className="grid grid-cols-10 gap-0.5 bg-slate-700 p-0.5">
-            {Array.from({ length: 100 }, (_, index) => (
+            {Array.from({ length: CELL_COUNT }, (_, index) => (
               <span
                 key={index}
                 className="relative flex"
